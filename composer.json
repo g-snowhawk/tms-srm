@@ -1,0 +1,22 @@
+{
+    "name": "g-snowhawk/tms-srm",
+    "version": "dev-feature",
+    "type": "library",
+    "description": "This package is sales receipt management system.",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.2.0"
+    },
+    "author": {
+        "name": "Taka G",
+        "homepage": "https://www.p5on.net"
+    },
+    "autoload": {
+        "psr-4": {
+            "Tms\\Srm\\" : "Tms/Srm/"
+        },
+        "classmap": [
+            "Tms/Srm/Srm.php"
+        ]
+    }
+}

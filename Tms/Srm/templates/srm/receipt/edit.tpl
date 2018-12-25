@@ -1,0 +1,154 @@
+{% extends "master.tpl" %}
+
+{% block main %}
+  <input type="hidden" name="mode" value="srm.receipt.receive:save">
+  <input type="hidden" name="draft" value="{% if post.draft is defined %}{{ post.draft }}{% else %}1{% endif %}">
+  <p id="backlink"><a href="?mode=srm.receipt.response">{{ receiptName }}一覧に戻る</a></p>
+  <div class="wrapper">
+    <h1>{{ receiptName }}編集</h1>
+    <div class="receipt-form">
+      <div class="flex-box">
+        <p>
+          {% if post.receipt_number is defined %}
+          <span id="receipt-number">No.&thinsp;{{ post.receipt_number }}<input type="hidden" name="receipt_number" value="{{ post.receipt_number }}">
+            {%- if post.page_number is defined %}
+              <span id="page-number">&nbsp;:&nbsp;p{{ post.page_number }}<input type="hidden" name="page_number" value="{{ post.page_number }}">
+            {% endif -%}
+          </span><br>
+          {% endif %}
+          <input type="date" name="issue_date" placeholder="発行日" value="{{ post.issue_date|date('Y-m-d') }}" required class="ta-r">
+          {% for field in extendedFields %}
+            {% if loop.first %}
+            <span class="meta-data">
+            {% endif %}
+              {% if field.type == 'text' %}
+              <input type="text" name="{{ field.name }}" value="{{ post[field.name] }}" placeholder="{{ field.label }}"><br>
+              {% elseif field.type == 'textarea' %}
+              <textarea name="{{ field.name }}" placeholder="{{ field.label }}">{{ field.defaultValue }}</textarea><br>
+              {% elseif field.type == 'select' %}
+                {% set options = apps.callFromTemplate(field.source, field.name) %}
+                <select name="{{ field.name }}"{% if field.class is defined %} class="{{ field.class }}{% endif %}">
+                  <option value="">{{ field.label }}</option>
+                  {% for option in options %}
+                  <option value="{{ option.value }}"{% if post[field.name] == option.value %} selected{% endif %}>{{ option.label }}</option>
+                  {% endfor %}
+                  {% if field.class == 'with-other' %}
+                    <option value="" data-other="isOther">選択肢追加...</option>
+                  {% endif %}
+                </select><br>
+              {% endif %}
+            {% if loop.last %}
+            </span>
+            {% endif %}
+          {% endfor %}
+        </p>
+        <p>
+          <span id="client-data"><input type="text" name="company" value="{{ post.company }}" placeholder="取引先名" tabindex="1" required></span><br>
+          <input type="text" name="division" value="{{ post.division }}" placeholder="部署"><br>
+          <input type="text" name="fullname" value="{{ post.fullname }}" placeholder="担当者"><br>
+          <input type="text" name="zipcode" value="{{ post.zipcode }}" placeholder="郵便番号" maxlength="8"><br>
+          <input type="text" name="address1" value="{{ post.address1 }}" placeholder="住所"><br>
+          <input type="text" name="address2" value="{{ post.address2 }}" placeholder="建物名等"><br>
+        </p>
+      </div>
+      <p><input type="text" name="subject" value="{{ post.subject }}" placeholder="件名" required></p>
+      <table class="receipt-detail">
+        <thead>
+          <tr>
+            <td>内容</td>
+            <td>軽</td>
+            <td>単価</td>
+            <td>数量</td>
+            <td>単位</td>
+            <td>金額</td>
+          </tr>
+        </thead>
+        <tfoot>
+          <tr>
+            <td colspan="2" rowspan="5"><textarea name="note" class="fixed-size-to-parent" placeholder="備考">{{ post.note }}</textarea></td>
+            <td colspan="3"><div class="label">小計</div></td>
+            <td><div class="value" id="subtotal">{{ subtotal }}</div></td>
+          </tr>
+          <tr>
+            <td colspan="3"><div class="label">消費税</div></td>
+            <td><div class="value" id="tax">{{ tax }}</div></td>
+          </tr>
+          <tr>
+            <td colspan="3"><input type="text" name="additional_1_item" value="{{ post.additional_1_item }}"></td>
+            <td><input type="number" name="additional_1_price" value="{{ post.additional_1_price }}"></td>
+          </tr>
+          <tr>
+            <td colspan="3"><input type="text" name="additional_2_item" value="{{ post.additional_2_item }}"></td>
+            <td><input type="number" name="additional_2_price" value="{{ post.additional_2_price }}"></td>
+          </tr>
+          <tr>
+            <td colspan="3"><div class="label">合計</div></td>
+            <td><div class="value" id="total">{{ total }}</div></td>
+          </tr>
+        </tfoot>
+        <tbody>
+          {% if carryForward is defined and carryForward > 0 %}
+            <tr class="carry-forward">
+              <td>前葉からの繰り越し</td>
+              <td class="ta-c"><span>*</span></td>
+              <td><input type="hidden" name="carry_forward" value="{{ carryForward }}"></td>
+              <td>&nbsp;</td>
+              <td><input type="hidden" name="carry_forward_tax" value="{{ carryForwardTax }}">&nbsp;</td>
+              <td><div id="sum-0"></div></td>
+            </tr>
+          {% endif %}
+          {% for i in 1..lineCount %}
+            {% set attr = i == 1 ? ' required' : '' %}
+            <tr>
+              <td><input type="text" name="content[{{ i }}]" value="{{ post.content[i] }}"{{ attr }}></td>
+              <td class="ta-c"><label class="hidden-checkbox"><input type="checkbox" name="reduced_tax_rate[{{ i }}]" value="1"{% if post.reduced_tax_rate[i] == '1' %} checked{% endif %}><span>*</span></label></td>
+              <td><input type="number" name="price[{{ i }}]" value="{{ post.price[i] }}"></td>
+              <td><input type="number" name="quantity[{{ i }}]" value="{{ post.quantity[i] }}"></td>
+              <td><input type="text" name="unit[{{ i }}]" value="{{ post.unit[i] }}"></td>
+              <td><div id="sum-{{ i }}"></div></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if pageCount > 1 %}
+      <nav class="page-nav">
+        {% for i in range(1, pageCount) %}
+        <a href="?mode=srm.receipt.response:edit&id={{ post.issue_date }}:{{ post.receipt_number }}:{{ i }}">{{ i }}</a>
+        {% endfor %}
+      </nav>
+      {% endif %}
+
+      <div class="notice">
+        <ul>
+          <li id="tax-rate" data-rate="{{ tax_rate }}">消費税率は<i class="under-line">{{ tax_rate * 100 }}%</i>で計算しています</li>
+          {% if reduced_tax_rate is not empty and reduced_tax_rate > 0 %}
+            <li id="reduced-tax-rate" data-rate="{{ reduced_tax_rate }}">軽減税率は<i class="under-line">{{ reduced_tax_rate * 100 }}%</i>で計算しています</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+    <div class="form-footer">
+      {% if post.draft != '0' %}
+        <div class="separate-block">
+          <span>
+            <input type="submit" name="s1_submit" value="発行">
+          </span>
+          <span>
+            <input type="submit" name="s1_draft" value="下書き保存">
+            <input type="submit" name="s1_addpage" value="次葉の追加">
+          </span>
+        </div>
+      {% else %}
+        <div class="adjacent-block">
+          <p>この{{ receiptName }}は確定済みです。これ以上変更できません</p>
+          <p><a href="?mode=srm.receipt.response:download-pdf&amp;id={{ post.issue_date|date('Y-m-d') ~ ':' ~ post.receipt_number }}" target="_blank" class="like-button">PDF</a></p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block pagefooter %}
+  <script src="/script/srm/receipt_editor.js"></script>
+{% endblock %}

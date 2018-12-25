@@ -1,0 +1,416 @@
+@charset 'utf-8';
+
+.separate-block {
+  display: flex;
+  justify-content: space-between;
+}
+.separate-block > * {
+  display: block;
+}
+
+.notice ul {
+  color: #808080;
+  font-size: .75rem;
+  margin-left: 1.5em;
+  padding: 0;
+}
+.notice i.under-line {
+  border-bottom: 1px dotted #999;
+  font-style: normal;
+  padding: 0 .2em;
+  text-decoration: none;
+}
+
+div.receipt-form {
+  margin: 0 auto;
+  max-width: 680px;
+  width: 100%;
+}
+div.receipt-form p input {
+  font-size: .85rem;
+}
+div.receipt-form p input[name=subject] {
+  width: 100%;
+}
+div.receipt-form div.flex-box {
+  display: flex;
+  flex-direction: row-reverse;
+}
+div.receipt-form div.flex-box > * {
+  min-width: 10%;
+}
+div.receipt-form div.flex-box > * select,
+div.receipt-form div.flex-box > * textarea,
+div.receipt-form div.flex-box > * input[type=date],
+div.receipt-form div.flex-box > * input[type=number],
+div.receipt-form div.flex-box > * input[type=text] {
+  box-sizing: border-box;
+  margin-bottom: -1px;
+  width: 180px;
+}
+div.receipt-form div.flex-box > * select {
+  border-radius: 0;
+}
+div.receipt-form div.flex-box > *:last-child {
+  flex-grow: 1;
+}
+div.receipt-form div.flex-box > *:last-child input {
+  width: 320px;
+}
+div.receipt-form div.flex-box > * .meta-data {
+  display: block;
+  margin-top: 1em;
+}
+div.receipt-form #receipt-number {
+  display: block;
+  font-size: .7rem;
+  text-align: right;
+}
+div.receipt-form #receipt-number + br {
+  display: none;
+}
+div.receipt-form select.with-other.default {
+  color: #abc;
+}
+
+div.receipt-form .page-nav {
+  display: flex;
+  justify-content: flex-end;
+}
+div.receipt-form .page-nav a {
+  background: #efefef;
+  border: 1px solid #ccc;
+  border-top: 0 none transparent;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  color: inherit;
+  display: inline-block;
+  font-size: .7rem;
+  margin-right: -1px;
+  padding: .3em .8em;
+  text-align: center;
+  text-decoration: none;
+}
+div.receipt-form .page-nav a:hover {
+  background: #fff;
+  color: #36c;
+}
+div.receipt-form .page-nav a:before {
+  content: 'Page: ';
+}
+
+table.receipt-detail {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: 100%;
+}
+table.receipt-detail td {
+  border: 1px solid #ccc;
+  padding: 0;
+}
+table.receipt-detail thead td {
+  font-size: .75rem;
+  line-height: 1;
+  padding: .5em;
+  text-align: center;
+}
+table.receipt-detail thead td:last-child {
+  width: 100%;
+}
+table.receipt-detail td input {
+  border: 0 none transparent;
+  margin: 0;
+}
+table.receipt-detail td input[name^=content] {
+  width: 320px;
+}
+table.receipt-detail td input[name^=price] {
+  width: 100px;
+  text-align: right;
+}
+table.receipt-detail td input[name^=quantity] {
+  width: 48px;
+  text-align: right;
+}
+table.receipt-detail td input[name^=unit] {
+  width: 40px;
+  text-align: center;
+}
+table.receipt-detail td label.hidden-checkbox {
+  cursor: pointer;
+}
+table.receipt-detail td label.hidden-checkbox input {
+  display: none;
+}
+table.receipt-detail td label.hidden-checkbox input + span {
+  color: #ccc;
+}
+table.receipt-detail td label.hidden-checkbox input:checked + span {
+  color: #000;
+}
+table.receipt-detail tbody tr.carry-forward td:nth-child(1) {
+  color: #999;
+  font-size: .75rem;
+  padding: .5em .3em;
+}
+table.receipt-detail tbody tr.carry-forward td:nth-child(2) {
+  color: #ccc;
+}
+table.receipt-detail tbody td input[name=carry_forward] {
+  text-align: right;
+  width: 141px;
+}
+table.receipt-detail tbody td div[id^=sum-] {
+  font-size: .75rem;
+  padding: .25em;
+  text-align: right;
+}
+table.receipt-detail tfoot td div.label {
+  font-size: .75rem;
+  padding: .5em;
+  text-align: right;
+}
+table.receipt-detail tfoot td div.value {
+  font-size: .75rem;
+  padding: .5em;
+  text-align: right;
+}
+table.receipt-detail tfoot td input {
+  font-size: .75rem;
+  text-align: right;
+  width: 190px;
+}
+table.receipt-detail tfoot tr td:last-child input {
+  width: 141px;
+}
+table.receipt-detail textarea {
+  border: 0 none transparent;
+  box-sizing: border-box;
+  font-size: .8rem;
+  margin: 0;
+  padding: .25em;
+  resize: none;
+}
+table.receipt-detail input[type=number]::-webkit-inner-spin-button,
+table.receipt-detail input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+table.receipt-detail input[type=number] {
+  -moz-appearance: textfield;
+  appearance: none;
+}
+table.receipt-detail + .notice ul {
+  margin-top: .3em;
+}
+
+#client-data {
+  display: block;
+  position: relative;
+}
+#client-data + br {
+  display: none;
+}
+#client-data #suggestion-list {
+  background: rgba(255,255,255,.8);
+  border: 1px solid #ccc;
+  position: absolute;
+  top: 100%;
+}
+#client-data #suggestion-list ul {
+  list-style-type: none;
+  margin: 0;
+  min-width: 320px;
+  padding: 0;
+}
+#client-data #suggestion-list ul li a {
+  display: block;
+  font-size: .7rem;
+  padding: .3em .5em;
+}
+#client-data #suggestion-list ul li a:first-child {
+  font-size: .8rem;
+}
+#client-data #suggestion-list ul li a:hover {
+  background: #efefef;
+}
+#client-data #suggestion-list #division,
+#client-data #suggestion-list #zipcode {
+  display: none;
+}
+
+
+
+table.nlist {
+  border-collapse: collapse;
+  width: 100%;
+}
+table.nlist td {
+  padding: .4em;
+  white-space: nowrap;
+}
+table.nlist thead td {
+  font-size: .8rem;
+}
+table.nlist thead tr:last-child {
+  border-bottom: 1px solid #000;
+}
+table.nlist tbody tr {
+  border-bottom: 1px solid #ccc;
+}
+table.nlist tbody td {
+  font-size: .9rem;
+}
+table.nlist tbody td.spacing-cell {
+  width: 100%;
+}
+table.nlist tbody td.spacing-25-cell {
+  width: 25%;
+}
+table.nlist tbody td.spacing-50-cell {
+  width: 50%;
+}
+table.nlist tbody td.spacing-75-cell {
+  width: 75%;
+}
+table.nlist tbody td.alphabet-cell {
+  font-family: Courier, 'Courier New', monospace;
+}
+table.nlist tbody td.numeric-cell {
+  font-family: Courier, 'Courier New', monospace;
+  text-align: right;
+}
+table.nlist tbody td.button a {
+  color: #999;
+  text-decoration: none;
+}
+table.nlist tbody td.button a:hover {
+  color: #36c;
+}
+table.nlist tbody td.button input {
+  display: none;
+}
+table.nlist tbody td.button label {
+  color: #999;
+  cursor: pointer;
+}
+table.nlist tbody td.button label:hover {
+  color: #333;
+}
+table.nlist tbody td.button label input + span:before {
+  color: #efefef;
+  content: '✓';
+  transition: color .5s ease;
+}
+table.nlist tbody td.button label:hover input + span:before {
+  color: #f00;
+}
+
+#srm-bank-default table.nlist tbody td:nth-child(4),
+#srm-bank-default table.nlist tbody td:nth-child(3) {
+  font-size: 1rem;
+}
+
+
+ul.button-list {
+  display: flex;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+ul.button-list li {
+  margin: 2px;
+}
+ul.button-list li a {
+  background: #69c;
+  border-radius: 4px;
+  color: #fff;
+  display: inline-block;
+  font-size: 1.2rem;
+  font-weight: 200;
+  min-width: 100px;
+  padding: .5em 1em;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+ul.button-list li a:focus,
+ul.button-list li a:hover {
+  background: #36c;
+}
+
+
+#srm-receipt ul li a:before {
+  color: transparent;
+  content: '✓';
+}
+#srm-receipt ul li.active a:before {
+  color: inherit;
+}
+
+
+#template-edit textarea[name=pdf_mapper] {
+  font-family: 'Courier New', monospace;
+  font-size: .8rem;
+  height: 300px;
+  white-space: pre;
+}
+
+#srm-receipt-default .section-list {
+  margin-bottom: 3rem;
+}
+#srm-receipt-default .section-list section {
+  border-bottom: 1px dotted #ccc;
+}
+#srm-receipt-default .section-list section h2 {
+  margin-bottom: 0;
+}
+#srm-receipt-default .section-list section h3 {
+  display: inline;
+  font-size: .8rem;
+  margin-right: .5em;
+}
+#srm-receipt-default .section-list section h3 + p {
+  color: #999;
+  display: inline;
+  font-size: .75rem;
+}
+#srm-receipt-default .section-list section .bill-info {
+  color: #333;
+  font-size: .8rem;
+  margin-left: 1em;
+}
+#srm-receipt-default .section-list section .bill-info strong {
+  color: #f00;
+  font-weight: normal;
+}
+#srm-receipt-default .section-list section .bill-info b {
+  color: #090;
+  font-weight: normal;
+}
+#srm-receipt-default .section-list section .bill-info i {
+  color: #808080;
+  font-style: normal;
+}
+#srm-receipt-default .section-list section nav {
+  margin: 1.25em auto .5em;
+  text-align: right;
+}
+#receipt-edit a.like-button,
+#srm-receipt-default .section-list section nav span,
+#srm-receipt-default .section-list section nav a {
+  background: rgba(0,0,0,.1);
+  border-radius: 4px;
+  color: #666;
+  display: inline-block;
+  font-size: .8rem;
+  min-width: 80px;
+  padding: .3em .5em;
+  text-align: center;
+  text-decoration: none;
+  transition: all .5s ease;
+}
+#receipt-edit a.like-button:hover,
+#srm-receipt-default .section-list section nav a:hover {
+  background: #39c;
+  color: #fff;
+}
