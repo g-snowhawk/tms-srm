@@ -408,7 +408,21 @@ class Receipt extends \Tms\Srm
             mkdir($save_dir, 0777, true);
         }
 
-        $pdf->encrypt(['copy', 'modify']);
+        if ($pdf_mapper->meta) {
+            $format = (string)$pdf_mapper->meta->title;
+            if (!empty($format)) {
+                $title = sprintf($pdf_mapper->meta->title, $receipt_number);
+                $title = date($title, strtotime($issue_date));
+            }
+            $meta = [
+                'title' => $title,
+                'subject' => (string)$pdf_mapper->meta->subject,
+                'author' => (string)$pdf_mapper->meta->author,
+            ];
+            $pdf->setMetaData($meta);
+        }
+
+        $pdf->encrypt(['copy','modify'], '', bin2hex(random_bytes(10)), 1);
 
         return $pdf->saveFileAs($save_path);
     }

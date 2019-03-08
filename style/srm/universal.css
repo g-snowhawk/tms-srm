@@ -409,6 +409,9 @@ ul.button-list li a:hover {
   text-decoration: none;
   transition: all .5s ease;
 }
+#srm-receipt-default .section-list section nav span {
+  background: transparent;
+}
 #receipt-edit a.like-button:hover,
 #srm-receipt-default .section-list section nav a:hover {
   background: #39c;
