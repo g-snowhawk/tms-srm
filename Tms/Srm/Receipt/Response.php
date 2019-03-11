@@ -306,11 +306,11 @@ class Response extends \Tms\Srm\Receipt
         if (preg_match("/^(\d{4}-\d{2}-\d{2}):(\d+)(:(\d+))?$/", $this->request->GET('id'), $match)) {
             $issue_date = $match[1];
             $receipt_number = $match[2];
-            $templatekey = $this->db->get('templatekey', 'receipt', 'issue_date = ? AND receipt_number = ? AND userkey = ?', [$issue_date, $receipt_number, $this->uid]);
+            $templatekey = $this->session->param('receipt_id');
 
             $pdf_mapper_source = $this->db->get('pdf_mapper', 'receipt_template', 'id = ? AND userkey = ?', [$templatekey, $this->uid]);
             if (empty($pdf_mapper_source)) {
-                throw new ErrorException('System Error');
+                trigger_error('System Error', E_USER_ERROR);
             }
 
             $pdf_mapper = simplexml_load_string($pdf_mapper_source);
@@ -319,10 +319,14 @@ class Response extends \Tms\Srm\Receipt
             $pdf_path = $this->pathToPdf($format, $issue_date, $receipt_number);
 
             if (!file_exists($pdf_path)) {
-                throw new ErrorException('PDF is not found');
+                trigger_error('PDF is not found', E_USER_ERROR);
             }
 
+            $format = (string)$pdf_mapper->attributes()->download_name;
+            $file_name = $this->pathToPdf($format, $issue_date, $receipt_number);
+
             header('Content-type: application/pdf');
+            header("Content-Disposition: inline; filename=$file_name");
             readfile($pdf_path);
             exit;
         }

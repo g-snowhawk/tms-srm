@@ -278,7 +278,7 @@ class Receipt extends \Tms\Srm
                 // }
 
                 $issue_date = "$year-$start_fiscal_year";
-                $options[] = date('Y-04-01', strtotime($issue_date));
+                $options[] = date('Y-m-d', strtotime($issue_date));
                 break;
             case 'year' :
                 $options[] = date('Y-01-01', $timestamp);
@@ -441,7 +441,7 @@ class Receipt extends \Tms\Srm
             foreach ($match[1] as $pattern) {
                 $n = strlen($pattern);
                 $regex = '/%#{'.$n.'}([^#]*)/';
-                $zero_fill = "%0{$n}d";
+                $zero_fill = ($n > 1) ? "%0{$n}d" : "%d";
                 $format = preg_replace($regex, "$zero_fill$1", $format, 1);
                 $format = sprintf($format, $receipt_number);
             }
