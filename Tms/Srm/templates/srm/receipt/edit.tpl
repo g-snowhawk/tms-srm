@@ -22,7 +22,7 @@
             <span class="meta-data">
             {% endif %}
               {% if field.type == 'text' %}
-              <input type="text" name="{{ field.name }}" value="{{ post[field.name] }}" placeholder="{{ field.label }}"><br>
+              <input type="text" name="{{ field.name }}" value="{{ post[field.name] }}" placeholder="{{ field.label }}"{%- for key in field|keys %}{% if key not in ['type','name','label'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}><br>
               {% elseif field.type == 'textarea' %}
               <textarea name="{{ field.name }}" placeholder="{{ field.label }}">{{ field.defaultValue }}</textarea><br>
               {% elseif field.type == 'select' %}

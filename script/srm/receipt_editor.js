@@ -64,8 +64,7 @@ function initializeReceiptEditor(event) {
     inputCompany.addEventListener('blur', listenerForSuggestion);
 
     const pulldowns = document.getElementsByClassName('with-other');
-    let i;
-    for (i = 0; i < pulldowns.length; i++) {
+    for (let i = 0; i < pulldowns.length; i++) {
         const element = pulldowns[i];
         element.addEventListener('change', selectedPulldown);
         element.dataset.currentIndex = element.selectedIndex;
@@ -345,15 +344,17 @@ function listenerForSuggestion(event) {
     }
 }
 
-function lockForm()
-{
+function lockForm() {
     const form = inputCompany.form;
     if (form) {
         const isDraft = (form.draft) ? form.draft.value : '1';
         if (isDraft === '0') {
             let i;
             for (i = 0; i < form.elements.length; i++) {
-                form.elements[i].disabled = true;
+                const element = form.elements[i];
+                if (!element.classList.contains('never')) {
+                    element.disabled = true;
+                }
             }
         }
     }

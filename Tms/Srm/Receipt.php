@@ -23,6 +23,9 @@ class Receipt extends \Tms\Srm
      */
     use \Tms\Accessor;
 
+    private $current_receipt_type;
+    private $total_price;
+
     /**
      * Object Constructer.
      */
@@ -82,6 +85,14 @@ class Receipt extends \Tms\Srm
                     )
                 ) {
                     $created_pdf = false;
+                }
+
+                if (false !== $created_pdf && strtolower($this->app->cnf("srm:link_{$this->current_receipt_type}_to_transfer")) === "yes") {
+                    if (false === $this->linkToTransfer($post)) {
+                        $created_pdf = false;
+                        // If failed link to transfer unlink PDF
+                        // ...
+                    }
                 }
             }
 
@@ -313,6 +324,7 @@ class Receipt extends \Tms\Srm
 
         $pdf_mapper = simplexml_load_string($pdf_mapper_source);
 
+        $this->current_receipt_type = (string)$pdf_mapper->attributes()->typeof;
         $line_count = (int)$pdf_mapper->detail->attributes()->rows;
         $middlepage_line_count = (int)$pdf_mapper->detail->attributes()->mrows;
 
@@ -542,6 +554,8 @@ class Receipt extends \Tms\Srm
         $header['tax'] = $tax;
         $header['total'] = $subtotal + $tax + (int)$header['additional_1_price'] + (int)$header['additional_2_price'];
 
+        $this->total_price = $header['total'];
+
         return $return_value;
     }
 
@@ -576,5 +590,47 @@ class Receipt extends \Tms\Srm
         }
 
         return $list;
+    }
+
+    private function linkToTransfer($post)
+    {
+        switch ($this->current_receipt_type) {
+            case 'bill':
+
+                $note = 'bill:' . $post['receipt_number'];
+                $category = 'T';
+
+                $page_number = $this->db->get('page_number', \Tms\Oas\Transfer::TRANSFER_TABLE, 
+                    'userkey = ? AND issue_date = ? AND category = ? AND note = ?',
+                    [$this->uid, $post['issue_date'], $category, $note]
+                );
+
+                if (!empty($page_number)) {
+                    $this->request->param('page_number', $page_number);
+                }
+                $this->request->param('category', $category);
+                $this->request->param('amount_left', ['1' => $this->total_price, '2' => null]);
+                $this->request->param('item_code_left', ['1' => '1131', '2' => null]);
+                $this->request->param('summary', ['1' => $post['subject'], '2' => $post['company']]);
+                $this->request->param('item_code_right', ['1' => '8111', '2' => null]);
+                $this->request->param('amount_right', ['1' => $this->total_price, '2' => null]);
+                $this->request->param('note', ['1' => $note, '2' => $note]);
+
+                $transfer = new \Tms\Oas\Transfer\Relational($this, $this->app);
+                $result = $transfer->save();
+
+                if (!empty($page_number)) {
+                    $this->request->param('page_number', null);
+                }
+                $this->request->param('category', null);
+                $this->request->param('amount_left', null);
+                $this->request->param('item_code_left', null);
+                $this->request->param('summary', null);
+                $this->request->param('item_code_right', null);
+                $this->request->param('amount_right', null);
+                $this->request->param('note', null);
+
+                return $result;
+        }
     }
 }
