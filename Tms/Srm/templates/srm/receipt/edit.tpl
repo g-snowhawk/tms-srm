@@ -23,6 +23,8 @@
             {% endif %}
               {% if field.type == 'text' %}
               <input type="text" name="{{ field.name }}" value="{{ post[field.name] }}" placeholder="{{ field.label }}"{%- for key in field|keys %}{% if key not in ['type','name','label'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}><br>
+              {% elseif field.type == 'checkbox' %}
+              <label><input type="checkbox" name="{{ field.name }}" value="{{ field.value }}"{% if post[field.name] == field.value %} checked{% endif %}{%- for key in field|keys %}{% if key not in ['type','name','label','value'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}>{{ field.label }}</label><br>
               {% elseif field.type == 'textarea' %}
               <textarea name="{{ field.name }}" placeholder="{{ field.label }}">{{ field.defaultValue }}</textarea><br>
               {% elseif field.type == 'select' %}
@@ -36,6 +38,8 @@
                     <option value="" data-other="isOther">選択肢追加...</option>
                   {% endif %}
                 </select><br>
+              {% elseif field.type == 'script' %}
+              <script src="{{ field.src }}"{% if field.async is not empty %} async{% endif %}></script>
               {% endif %}
             {% if loop.last %}
             </span>

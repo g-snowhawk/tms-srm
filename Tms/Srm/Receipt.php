@@ -65,15 +65,15 @@ class Receipt extends \Tms\Srm
             && false !== $this->saveReceipt($client_id, $post)
             && false !== $this->saveReceiptDetails($post)
         ) {
+            $key_array = [];
+            $key_array[] = date('Y-m-d', strtotime($post['issue_date']));
+            $key_array[] = $post['receipt_number'];
+            $key_array[] = $this->uid;
+            $key_array[] = $this->session->param('receipt_id');
 
             // Output the receipt as a PDF
-            if ( empty($post['s1_draft']) ) {
-                $key_array = [];
-                $key_array[] = date('Y-m-d', strtotime($post['issue_date']));
-                $key_array[] = $post['receipt_number'];
-                $key_array[] = $this->uid;
-                $key_array[] = $this->session->param('receipt_id');
-                $created_pdf = $this->outputPdf($client_id, implode('-',$key_array));
+            if (empty($post['s1_draft']) && $post['draft'] === '1') {
+                $after_follow = $this->outputPdf($client_id, implode('-',$key_array));
 
                 // Remove draft flag from current receipt
                 if (false === $this->db->update
@@ -84,19 +84,32 @@ class Receipt extends \Tms\Srm
                         $key_array
                     )
                 ) {
-                    $created_pdf = false;
+                    $after_follow = false;
                 }
 
-                if (false !== $created_pdf && strtolower($this->app->cnf("srm:link_{$this->current_receipt_type}_to_transfer")) === "yes") {
+                if (false !== $after_follow && strtolower($this->app->cnf("srm:link_{$this->current_receipt_type}_to_transfer")) === "yes") {
                     if (false === $this->linkToTransfer($post)) {
-                        $created_pdf = false;
+                        $after_follow = false;
                         // If failed link to transfer unlink PDF
                         // ...
                     }
                 }
+            } elseif (!empty($post['receipt'])) {
+                $pdf_mapper_source = $this->db->get('pdf_mapper', 'receipt_template', 'id = ? AND userkey = ?', [$this->session->param('receipt_id'), $this->uid]);
+                if (!empty($pdf_mapper_source)) {
+                    $pdf_mapper = simplexml_load_string($pdf_mapper_source);
+                    $this->current_receipt_type = (string)$pdf_mapper->attributes()->typeof;
+                }
+
+                if (strtolower($this->app->cnf("srm:link_{$this->current_receipt_type}_to_transfer")) === "yes") {
+                    $this->total_price = $this->calcurateTotals(implode('-',$key_array));
+                    if (false === $this->linkToTransfer($post)) {
+                        $after_follow = false;
+                    }
+                }
             }
 
-            if (!isset($created_pdf) || false !== $created_pdf) {
+            if (!isset($after_follow) || false !== $after_follow) {
                 return $this->db->commit();
             }
         }
@@ -342,18 +355,9 @@ class Receipt extends \Tms\Srm
         $page_numbers = array_keys($detail);
         $page_count = max($page_numbers);
 
-        $company = preg_replace('/\s+/', '', mb_convert_kana($client['company'], 's'));
-        $fullname = preg_replace('/\s+/', '', mb_convert_kana($client['fullname'], 's'));
-        if ($company === $fullname) {
-            $client['fullname'] = null;
-            $pdf_mapper->client->company->attributes()->suffix = $pdf_mapper->client->fullname->attributes()->suffix;
-        }
-
-        if ($pdf_mapper->client->zipcode->attributes()->format
-            && preg_match('/^(\d{3})(\d{4})$/', $client['zipcode'], $match)
-        ) {
-            $client['zipcode'] = [$match[1], $match[2]];
-        }
+        // TODO: considered a better practice
+        $this->honorificTitle($client, $pdf_mapper);
+        $this->formatZipcode($client, $pdf_mapper);
 
         $pdf = new \Tms\Pdf();
 
@@ -469,6 +473,22 @@ class Receipt extends \Tms\Srm
             if (!is_object($child_node)) {
                 continue;
             }
+
+            if ($child_node->attributes()->disableif) {
+                $condition = (string)$child_node->attributes()->disableif;
+                if (preg_match('/^(post|get)\.(.*)\s+(eq|ne)\s+(.*)$/', $condition, $match)) {
+                    list ($all, $method, $item, $comparison_operator, $value) = $match;
+                    switch ($comparison_operator) {
+                        case 'eq':
+                            $this->request->$method($item) === $value;
+                            continue 2;
+                        case 'ne':
+                            $this->request->$method($item) !== $value;
+                            continue 2;
+                    }
+                }
+            }
+
             if ($node_name === 'firstpage') {
                 if ($page === 1) {
                     $return_value = array_merge($return_value, self::pdfMapping(get_object_vars($child_node), $page, $count, $files));
@@ -597,22 +617,40 @@ class Receipt extends \Tms\Srm
         switch ($this->current_receipt_type) {
             case 'bill':
 
+                if (!isset($post['relation']) || $post['relation'] !== 'yes') {
+                    return;
+                }
+
                 $note = 'bill:' . $post['receipt_number'];
                 $category = 'T';
+                $sales_amount_code = '8111';
+                $accounts_receivable_code = '1131';
+
+                if (empty($post['receipt'])) {
+                    $item_code_left  = ['1' => $accounts_receivable_code, '2' => null];
+                    $item_code_right = ['1' => $sales_amount_code, '2' => null];
+                    $datekey = 'issue_date';
+                } else {
+                    $bank_code = $this->db->get('item_code', 'bank', 'userkey = ? AND account_number = ?', [$this->uid, $post['bank_id']]);
+                    $item_code_left  = ['1' => $bank_code, '2' => null];
+                    $item_code_right = ['1' => $accounts_receivable_code, '2' => null];
+                    $this->request->param('issue_date', $post['receipt']);
+                    $datekey = 'receipt';
+                }
 
                 $page_number = $this->db->get('page_number', \Tms\Oas\Transfer::TRANSFER_TABLE, 
                     'userkey = ? AND issue_date = ? AND category = ? AND note = ?',
-                    [$this->uid, $post['issue_date'], $category, $note]
+                    [$this->uid, $post[$datekey], $category, $note]
                 );
-
                 if (!empty($page_number)) {
                     $this->request->param('page_number', $page_number);
                 }
+
                 $this->request->param('category', $category);
                 $this->request->param('amount_left', ['1' => $this->total_price, '2' => null]);
-                $this->request->param('item_code_left', ['1' => '1131', '2' => null]);
+                $this->request->param('item_code_left', $item_code_left);
                 $this->request->param('summary', ['1' => $post['subject'], '2' => $post['company']]);
-                $this->request->param('item_code_right', ['1' => '8111', '2' => null]);
+                $this->request->param('item_code_right', $item_code_right);
                 $this->request->param('amount_right', ['1' => $this->total_price, '2' => null]);
                 $this->request->param('note', ['1' => $note, '2' => $note]);
 
@@ -629,8 +667,48 @@ class Receipt extends \Tms\Srm
                 $this->request->param('item_code_right', null);
                 $this->request->param('amount_right', null);
                 $this->request->param('note', null);
+                $this->request->param('issue_date', $post['issue_date']);
 
                 return $result;
         }
+    }
+
+    public function honorificTitle(&$data, &$pdf_mapper)
+    {
+        $company = preg_replace('/\s+/', '', mb_convert_kana($data['company'], 's'));
+        $fullname = preg_replace('/\s+/', '', mb_convert_kana($data['fullname'], 's'));
+        if ($company === $fullname) {
+            $data['fullname'] = null;
+            $pdf_mapper->client->company->attributes()->suffix = $pdf_mapper->client->fullname->attributes()->suffix;
+        }
+
+        if (!empty($data['fullname'])) {
+            $pdf_mapper->client->company->attributes()->suffix = '';
+        }
+    }
+
+    public function formatZipcode(&$data, &$pdf_mapper)
+    {
+        if ($pdf_mapper->client->zipcode->attributes()->format
+            && preg_match('/^(\d{3})(\d{4})$/', $data['zipcode'], $match)
+        ) {
+            $data['zipcode'] = [$match[1], $match[2]];
+        }
+    }
+
+    protected function calcurateTotals($receiptkey)
+    {
+        $detail = $this->db->select('*', 'receipt_detail', "WHERE CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey) = ? ORDER BY `page_number`,`line_number`", [$receiptkey]);
+
+        // Culcuration totals
+        $subtotal = 0;
+        $tax = 0;
+        foreach ($detail as $unit) {
+            $sum = (float)$unit['price'] * (int)$unit['quantity'];
+            $subtotal += $sum;
+            $tax += $sum * (float)$unit['tax_rate'];
+        }
+
+        return $subtotal + $tax + (int)$header['additional_1_price'] + (int)$header['additional_2_price'];
     }
 }

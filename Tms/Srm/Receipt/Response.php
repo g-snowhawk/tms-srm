@@ -95,7 +95,7 @@ class Response extends \Tms\Srm\Receipt
                 FROM table::receipt AS r
                 JOIN table::receipt_to AS c
                   ON r.client_id = c.id
-               WHERE r.userkey = ? AND r.templatekey = ? ORDER BY collected ASC,r.issue_date DESC";
+               WHERE r.userkey = ? AND r.templatekey = ? ORDER BY collected ASC,r.issue_date DESC,r.receipt_number DESC";
             $options = [$this->uid, $receipt_id];
 
             // Pagenation
