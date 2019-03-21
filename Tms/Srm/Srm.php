@@ -100,6 +100,18 @@ class Srm extends User implements PackageInterface
     }
 
     /**
+     * Application label
+     *
+     * @final
+     *
+     * @return string
+     */
+    final public static function applicationLabel()
+    {
+        return \P5\Lang::translate('APPLICATION_LABEL');
+    }
+
+    /**
      * This package version
      *
      * @final

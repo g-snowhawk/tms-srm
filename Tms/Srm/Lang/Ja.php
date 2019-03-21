@@ -22,6 +22,7 @@ class Ja extends \P5\Lang
     const ALT_NAME = '帳票管理';
 
     protected $APPLICATION_NAME = self::APP_NAME;
+    protected $APPLICATION_LABEL = '帳票発行';
     protected $APP_DETAIL    = self::ALT_NAME.'機能を提供します。';
     protected $SUCCESS_SETUP = self::ALT_NAME.'機能の追加に成功しました。';
     protected $FAILED_SETUP  = self::ALT_NAME.'機能の追加に失敗しました。';
