@@ -139,6 +139,7 @@
             <input type="submit" name="s1_submit" value="発行">
           </span>
           <span>
+            <a href="?mode=srm.receipt.response" class="button">キャンセル<a>
             <input type="submit" name="s1_draft" value="下書き保存">
             <input type="submit" name="s1_addpage" value="次葉の追加">
           </span>
@@ -146,7 +147,10 @@
       {% else %}
         <div class="adjacent-block">
           <p>この{{ receiptName }}は確定済みです。これ以上変更できません</p>
-          <p><a href="?mode=srm.receipt.response:download-pdf&amp;id={{ post.issue_date|date('Y-m-d') ~ ':' ~ post.receipt_number }}" target="_blank" class="like-button">PDF</a></p>
+          <p>
+            <a href="?mode=srm.receipt.response" class="like-button">キャンセル<a>
+            <a href="?mode=srm.receipt.response:download-pdf&amp;id={{ post.issue_date|date('Y-m-d') ~ ':' ~ post.receipt_number }}" target="_blank" class="like-button">PDF</a>
+          </p>
         </div>
       {% endif %}
     </div>

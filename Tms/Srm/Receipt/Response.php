@@ -44,13 +44,19 @@ class Response extends \Tms\Srm\Receipt
         $template_path = 'srm/receipt/default.tpl';
 
         $receipt_name = null;
-        $new_receipt_id = $this->request->param('t');
-        if (!empty($new_receipt_id)) {
-            $receipt = $this->db->get('id,title', 'receipt_template', 'id = ?', [$new_receipt_id]);
+        if (!empty($this->request->param('t'))) {
+            $receipt = $this->db->get('id,title', 'receipt_template', 'id = ?', [$this->request->param('t')]);
             if (!empty($receipt)) {
                 $this->session->param('receipt_id', $receipt['id']);
                 $receipt_name = $receipt['title'];
+
+                // Reset current page number
+                $this->session->param('receipt_page', 1);
             }
+        }
+
+        if (!empty($this->request->param('p'))) {
+            $this->session->param('receipt_page', $this->request->param('p'));
         }
 
         $receipt_id = $this->session->param('receipt_id');
@@ -99,11 +105,10 @@ class Response extends \Tms\Srm\Receipt
             $options = [$this->uid, $receipt_id];
 
             // Pagenation
+            $current_page = (int)$this->session->param('receipt_page') ?: 1;
             $rows_per_page = (empty($this->session->param('rows_per_page_receipt_list')))
                 ? $this->rows_per_page
                 : (int)$this->session->param('rows_per_page_receipt_list');
-            $current_page = (empty($this->request->param('p')))
-                ? 1 : (int)$this->request->param('p');
             $total_count = $this->db->recordCount($statement, $options);
             $offset_list = $rows_per_page * ($current_page - 1);
             $pager = clone $this->pager;
