@@ -210,8 +210,9 @@ class Response extends \Tms\Srm\Receipt
         } else {
             $post = [];
             if (preg_match("/^(\d{4}-\d{2}-\d{2}):(\d+)(:(\d+))?$/", $this->request->GET('id'), $match)) {
+                $draft = empty($this->request->GET('draft')) ? '0' : $this->request->GET('draft');
                 $post = (empty($this->request->GET('cp'))) 
-                    ? $this->receiptDetail($receipt_id, $match[1], $match[2], $match[4], ($add_page !== 'addpage'))
+                    ? $this->receiptDetail($receipt_id, $match[1], $match[2], $match[4], $draft, ($add_page !== 'addpage'))
                     : $this->cloneReceipt($receipt_id, $match[1], $match[2], $match[4], $this->request->GET('cp'));
             }
 

@@ -172,9 +172,12 @@ class Receipt extends \Tms\Srm
             'receipt_number' => $post[$receipt_number_key],
             'userkey' => $this->uid,
             'templatekey' => $receipt_id,
-            'draft' => $is_draft,
             'page_number' => $page_number,
         ];
+
+        if ($post['s1_submit'] === 'via JS') {
+            $save['draft'] = $is_draft;
+        }
 
         for ($line_number = 1; $line_number <= $lines; $line_number++) {
             if (empty($post['content'][$line_number]) && empty($post['price'][$line_number])) {
@@ -718,10 +721,10 @@ class Receipt extends \Tms\Srm
         return false !== $this->db->update('receipt', $data, $statement, $options);
     }
 
-    protected function receiptDetail($templatekey, $issue_date, $receipt_number, $page_number, $with_lines)
+    protected function receiptDetail($templatekey, $issue_date, $receipt_number, $page_number, $draft, $with_lines)
     {
-        $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ?';
-        $replaces = [$issue_date, $receipt_number, $this->uid, $templatekey];
+        $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND draft = ?';
+        $replaces = [$issue_date, $receipt_number, $this->uid, $templatekey, $draft];
         $receipt_data = $this->db->get("*", 'receipt', $statement, $replaces);
 
         if (!empty($receipt_data['client_id'])) {
@@ -827,6 +830,6 @@ class Receipt extends \Tms\Srm
             parent::redirect("srm.receipt.response:edit\&id\={$clone_issue_date}:{$clone_receipt_number}");
         }
 
-        return $this->receiptDetail($templatekey, $clone_issue_date, $clone_receipt_number, $page_number, true);
+        return $this->receiptDetail($templatekey, $clone_issue_date, $clone_receipt_number, $page_number, '1', true);
     }
 }

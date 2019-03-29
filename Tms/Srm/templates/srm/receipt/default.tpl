@@ -33,7 +33,7 @@
             </div>
             <div>
               {% if apps.hasPermission('srm.update') %} 
-                <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}">明細表示</a>
+              <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}{% if unit.draft == '1'%}&amp;draft=1{% endif %}">明細表示</a>
               {% endif %}
               {% if unit.draft != '1' %}
                 <a href="?mode=srm.receipt.response:download-pdf&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}" target="_blank">PDF</a>
