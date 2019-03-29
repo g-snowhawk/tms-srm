@@ -27,14 +27,6 @@ class Receipt extends \Tms\Srm
     private $total_price;
 
     /**
-     * Object Constructer.
-     */
-    //public function __construct()
-    //{
-    //    call_user_func_array('parent::__construct', func_get_args());
-    //}
-
-    /**
      * Save the data.
      *
      * @return bool
@@ -57,14 +49,21 @@ class Receipt extends \Tms\Srm
 
         $this->db->begin();
 
+        $is_draft = (empty($post['s1_submit'])) ? '1' : '0'; 
         if (empty($post['receipt_number'])) {
-            $post['receipt_number'] = $this->newReceiptNumber($post['issue_date']);
+            $post['receipt_number'] = $this->newReceiptNumber($post['issue_date'], $is_draft);
+        } elseif ($is_draft === '0') {
+            $post['new_receipt_number'] = $this->newReceiptNumber($post['issue_date'], $is_draft);
         }
 
         if (0 !== ($client_id = $this->saveClientData($post))
-            && false !== $this->saveReceipt($client_id, $post)
-            && false !== $this->saveReceiptDetails($post)
+            && false !== $this->saveReceipt($client_id, $post, $is_draft)
+            && false !== $this->saveReceiptDetails($post, $is_draft)
         ) {
+            if (isset($post['new_receipt_number'])) {
+                $post['receipt_number'] = $post['new_receipt_number'];
+            }
+
             $key_array = [];
             $key_array[] = date('Y-m-d', strtotime($post['issue_date']));
             $key_array[] = $post['receipt_number'];
@@ -72,17 +71,9 @@ class Receipt extends \Tms\Srm
             $key_array[] = $this->session->param('receipt_id');
 
             // Output the receipt as a PDF
-            if (empty($post['s1_draft']) && $post['draft'] === '1') {
-                $after_follow = $this->outputPdf($client_id, implode('-',$key_array));
-
-                // Remove draft flag from current receipt
-                if (false === $this->db->update
-                    (
-                        'receipt',
-                        ['draft' => '0'],
-                        "issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ?",
-                        $key_array
-                    )
+            if (!empty($post['s1_submit']) && $post['draft'] === '1') {
+                if (false === $this->outputPdf($client_id, implode('-',$key_array))
+                    || false === $this->removeDraftFlag($key_array)
                 ) {
                     $after_follow = false;
                 }
@@ -164,7 +155,7 @@ class Receipt extends \Tms\Srm
         return 0;
     }
 
-    private function saveReceiptDetails($post) : bool
+    private function saveReceiptDetails($post, $is_draft) : bool
     {
         $receipt_id = $this->session->param('receipt_id');
         $lines = $this->db->get('line', 'receipt_template', 'id = ? AND userkey = ?', [$receipt_id, $this->uid]);
@@ -173,9 +164,12 @@ class Receipt extends \Tms\Srm
         if (empty($page_number)) $page_number = 1;
 
         $table_name = 'receipt_detail';
+        $receipt_number_key = (isset($post['new_receipt_number']))
+            ? 'new_receipt_number' : 'receipt_number';
+
         $save = [
             'issue_date' => $post['issue_date'],
-            'receipt_number' => $post['receipt_number'],
+            'receipt_number' => $post[$receipt_number_key],
             'userkey' => $this->uid,
             'templatekey' => $receipt_id,
             'page_number' => $page_number,
@@ -221,7 +215,7 @@ class Receipt extends \Tms\Srm
 
             $error_message = $this->db->error();
             if (preg_match("/^Duplicate entry '(.+)' for key 'PRIMARY'$/", $error_message, $match)) {
-                if (false === $this->db->update($table_name, $save, "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',page_number,'-',line_number) = ?", [$match[1]])) {
+                if (false === $this->db->update($table_name, $save, "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',page_number,'-',line_number,'-',draft) = ?", [$match[1]])) {
                     return false;
                 }
             } else {
@@ -232,7 +226,7 @@ class Receipt extends \Tms\Srm
         return true;
     }
 
-    private function saveReceipt($client_id, $post) : bool
+    private function saveReceipt($client_id, $post, $is_draft) : bool
     {
         $table_name = 'receipt';
         $receipt_id = $this->session->param('receipt_id');
@@ -260,7 +254,10 @@ class Receipt extends \Tms\Srm
         if (false === $this->db->insert($table_name, $save)) {
             $error_message = $this->db->error();
             if (preg_match("/^Duplicate entry '(.+)' for key 'PRIMARY'$/", $error_message, $match)) {
-                if (false === $this->db->update($table_name, $save, "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey) = ?", [$match[1]])) {
+                if ($is_draft === '0' && isset($post['new_receipt_number'])) {
+                    $save['receipt_number'] = $post['new_receipt_number'];
+                }
+                if (false === $this->db->update($table_name, $save, "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$match[1]])) {
                     return false;
                 }
             }
@@ -269,7 +266,7 @@ class Receipt extends \Tms\Srm
         return true;
     }
 
-    private function newReceiptNumber($issue_date) : ?int
+    private function newReceiptNumber($issue_date, $is_draft) : ?int
     {
         $receipt_id = $this->session->param('receipt_id');
         if (empty($receipt_id)) {
@@ -278,8 +275,8 @@ class Receipt extends \Tms\Srm
 
         $timestamp = strtotime($issue_date);
 
-        $statement = 'userkey = ? AND templatekey = ?';
-        $options = [$this->uid, $receipt_id];
+        $statement = 'userkey = ? AND templatekey = ? AND draft = ?';
+        $options = [$this->uid, $receipt_id, $is_draft];
 
         if ($this->app->cnf('srm:allow_renumbering') === '1') {
             $statement .= ' AND issue_date <= ?';
@@ -710,5 +707,117 @@ class Receipt extends \Tms\Srm
         }
 
         return $subtotal + $tax + (int)$header['additional_1_price'] + (int)$header['additional_2_price'];
+    }
+
+    private function removeDraftFlag($options)
+    {
+        $data = ['draft' => '0'];
+        $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ?';
+
+        return false !== $this->db->update('receipt', $data, $statement, $options);
+    }
+
+    protected function receiptDetail($templatekey, $issue_date, $receipt_number, $page_number, $with_lines)
+    {
+        $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ?';
+        $replaces = [$issue_date, $receipt_number, $this->uid, $templatekey];
+        $receipt_data = $this->db->get("*", 'receipt', $statement, $replaces);
+
+        if (!empty($receipt_data['client_id'])) {
+            $client_data = $this->clientData($receipt_data['client_id']);
+            foreach ($client_data as $key => $value) {
+                $receipt_data[$key] = $value;
+            }
+        }
+
+        if ($with_lines) {
+            if (!empty($page_number)) {
+                $receipt_data['page_number'] = $page_number;
+            } else {
+                $page_number = 1;
+            }
+            $receipt_data = array_merge($receipt_data, $this->receiptLines($templatekey, $receipt_data['issue_date'], $receipt_data['receipt_number'], $page_number));
+        }
+
+        return $receipt_data;
+    }
+
+    protected function receiptLines($templatekey, $issue_date, $receipt_number, $page_number): array
+    {
+        $return_value = [];
+        $lines = $this->db->select(
+            'line_number,content,price,quantity,tax_rate,unit',
+            'receipt_detail',
+            'WHERE issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND page_number = ?',
+            [$issue_date, $receipt_number, $this->uid, $templatekey, $page_number]
+        );
+
+        foreach ((array)$lines as $line) {
+            $line_number = $line['line_number'];
+            foreach ((array)$line as $key => $value) {
+                if ($key === 'line_number') {
+                    continue;
+                }
+                if ($key === 'tax_rate') {
+                    $return_value[$key][$line_number] = 0;
+                    continue;
+                }
+                $return_value[$key][$line_number] = $value;
+            }
+            if (!empty($sum)) {
+                $return_value['sum'][$line_number] = $sum;
+            }
+        }
+
+        return $return_value;
+    }
+
+    protected function clientData($client_id): array
+    {
+        return $this->db->get(
+            'company,division,fullname,zipcode,address1,address2',
+            'receipt_to',
+            'id = ? ',
+            [$client_id]
+        );
+    }
+
+    protected function cloneReceipt($templatekey, $issue_date, $receipt_number, $page_number)
+    {
+        $this->db->begin();
+
+        $clone_issue_date = date('Y-m-d');
+        $clone_receipt_number = $this->newReceiptNumber($issue_date, '1');
+        foreach (['receipt', 'receipt_detail'] as $table_name) {
+            $columns = [];
+            $fields = $this->db->getFields($table_name);
+            foreach ($fields as $field) {
+                if ($field === 'issue_date' || $field === 'receipt_number') {
+                    $columns[] = "? AS $field";
+                } elseif ($field === 'subject') {
+                    $columns[] = "CONCAT($field,' (Copy)') AS $field";
+                } elseif ($field === 'draft') {
+                    $columns[] = "'1' AS draft";
+                } else {
+                    $columns[] = "$field";
+                }
+            }
+            $statement = "INSERT INTO table::{$table_name}
+                                 SELECT " . implode(',', $columns) . " 
+                                   FROM table::{$table_name}
+                                  WHERE issue_date = ? AND receipt_number = ?
+                                    AND userkey = ? AND templatekey = ?";
+            $options = [
+                $clone_issue_date, $clone_receipt_number,
+                $issue_date, $receipt_number, $this->uid, $templatekey
+            ];
+
+            $this->db->prepare($statement);
+            $this->db->execute($options);
+        }
+
+        $this->db->commit();
+
+        return $this->receiptDetail($templatekey, $clone_issue_date, $clone_receipt_number, $page_number, true);
     }
 }

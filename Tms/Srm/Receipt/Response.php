@@ -198,53 +198,9 @@ class Response extends \Tms\Srm\Receipt
         } else {
             $post = [];
             if (preg_match("/^(\d{4}-\d{2}-\d{2}):(\d+)(:(\d+))?$/", $this->request->GET('id'), $match)) {
-                $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ?';
-                $replaces = [$match[1], $match[2], $this->uid, $receipt_id];
-                $post = $this->db->get("*", 'receipt', $statement, $replaces);
-
-                if (!empty($post['client_id'])) {
-                    $client_data = $this->db->get(
-                        'company,division,fullname,zipcode,address1,address2',
-                        'receipt_to',
-                        'id = ? ',
-                        [$post['client_id']]
-                    );
-
-                    foreach ((array)$client_data as $key => $value) {
-                        $post[$key] = $value;
-                    }
-                }
-
-                if ($add_page !== 'addpage') {
-                    $page_number = 1;
-                    if (isset($match[4])) {
-                        $page_number = $match[4];
-                        $post['page_number'] = $page_number;
-                    }
-                    $details = $this->db->select(
-                        'line_number,content,price,quantity,tax_rate,unit',
-                        'receipt_detail',
-                        'WHERE issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND page_number = ?',
-                        [$post['issue_date'], $post['receipt_number'], $this->uid, $receipt_id, $page_number]
-                    );
-
-                    foreach ((array)$details as $detail) {
-                        $line_number = $detail['line_number'];
-                        foreach ((array)$detail as $key => $value) {
-                            if ($key === 'line_number') {
-                                continue;
-                            }
-                            if ($key === 'tax_rate') {
-                                $post[$key][$line_number] = 0;
-                                continue;
-                            }
-                            $post[$key][$line_number] = $value;
-                        }
-                        if (!empty($sum)) {
-                            $post['sum'][$line_number] = $sum;
-                        }
-                    }
-                }
+                $post = ($this->request->GET('cp') === '1') 
+                    ? $this->cloneReceipt($receipt_id, $match[1], $match[2], $match[4])
+                    : $this->receiptDetail($receipt_id, $match[1], $match[2], $match[4], ($add_page !== 'addpage'));
             }
 
             if (empty($post['issue_date'])) {

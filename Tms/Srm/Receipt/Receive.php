@@ -96,7 +96,7 @@ class Receive extends Response
         $clients = $this->db->select(
             'company,fullname,zipcode,address1,address2,division',
             'receipt_to',
-            "WHERE REPLACE(REPLACE(company,'$ideographic_space',' '),' ','') like ? collate utf8_unicode_ci",
+            "WHERE REPLACE(REPLACE(company,'$ideographic_space',' '),' ','') LIKE ? COLLATE utf8mb4_unicode_ci",
             ["%$keyword%"]
         );
 
