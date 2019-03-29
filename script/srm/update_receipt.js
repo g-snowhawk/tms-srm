@@ -44,6 +44,12 @@ function update(event) {
                 const element = form.elements[i];
                 element.disabled = false;
             }
+
+            const hidden = form.appendChild(document.createElement('input'));
+            hidden.type = 'hidden';
+            hidden.name = 's1_submit';
+            hidden.value = 'via JS';
+
             form.submit();
         }
     }

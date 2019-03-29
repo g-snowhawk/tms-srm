@@ -172,6 +172,7 @@ class Receipt extends \Tms\Srm
             'receipt_number' => $post[$receipt_number_key],
             'userkey' => $this->uid,
             'templatekey' => $receipt_id,
+            'draft' => $is_draft,
             'page_number' => $page_number,
         ];
 
