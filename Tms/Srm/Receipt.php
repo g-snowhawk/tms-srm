@@ -267,9 +267,9 @@ class Receipt extends \Tms\Srm
         return true;
     }
 
-    private function newReceiptNumber($issue_date, $is_draft) : ?int
+    private function newReceiptNumber($issue_date, $is_draft, $destination = null) : ?int
     {
-        $receipt_id = $this->session->param('receipt_id');
+        $receipt_id = (!empty($destination)) ? $destination : $this->session->param('receipt_id');
         if (empty($receipt_id)) {
             return null;
         }
@@ -783,12 +783,12 @@ class Receipt extends \Tms\Srm
         );
     }
 
-    protected function cloneReceipt($templatekey, $issue_date, $receipt_number, $page_number)
+    protected function cloneReceipt($templatekey, $issue_date, $receipt_number, $page_number, $destination = null)
     {
         $this->db->begin();
 
         $clone_issue_date = date('Y-m-d');
-        $clone_receipt_number = $this->newReceiptNumber($issue_date, '1');
+        $clone_receipt_number = $this->newReceiptNumber($issue_date, '1', $destination);
         foreach (['receipt', 'receipt_detail'] as $table_name) {
             $columns = [];
             $fields = $this->db->getFields($table_name);
@@ -798,7 +798,9 @@ class Receipt extends \Tms\Srm
                 } elseif ($field === 'subject') {
                     $columns[] = "CONCAT($field,' (Copy)') AS $field";
                 } elseif ($field === 'draft') {
-                    $columns[] = "'1' AS draft";
+                    $columns[] = "'1' AS $field";
+                } elseif ($field === 'templatekey' && !empty($destination) && $templatekey !== $destination) {
+                    $columns[] = $this->db->quote($destination) . " AS $field";
                 } else {
                     $columns[] = "$field";
                 }
@@ -818,6 +820,12 @@ class Receipt extends \Tms\Srm
         }
 
         $this->db->commit();
+
+        if (!empty($destination) && $templatekey !== $destination) {
+            $this->session->param('receipt_id', $destination);
+            $this->session->clear('receipt_page');
+            parent::redirect("srm.receipt.response:edit\&id\={$clone_issue_date}:{$clone_receipt_number}");
+        }
 
         return $this->receiptDetail($templatekey, $clone_issue_date, $clone_receipt_number, $page_number, true);
     }

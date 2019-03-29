@@ -79,6 +79,18 @@ class Response extends \Tms\Srm\Receipt
                 if (!empty($receipt['pdf_mapper'])) {
                     $pdf_mapper = simplexml_load_string($receipt['pdf_mapper']);
                     $type_of_receipt = (string)$pdf_mapper->attributes()->typeof;
+
+                    $duplicate_to = $pdf_mapper->duplicateto;
+                    $items = [];
+                    foreach ($duplicate_to->item as $item) {
+                        $items[] = [
+                            'id' => (string)$item->attributes()->id,
+                            'label' => (string)$item,
+                        ];
+                    }
+                    if (!empty($items)) {
+                        $this->view->bind('duplicateTo', $items);
+                    }
                 }
             }
 
@@ -198,9 +210,9 @@ class Response extends \Tms\Srm\Receipt
         } else {
             $post = [];
             if (preg_match("/^(\d{4}-\d{2}-\d{2}):(\d+)(:(\d+))?$/", $this->request->GET('id'), $match)) {
-                $post = ($this->request->GET('cp') === '1') 
-                    ? $this->cloneReceipt($receipt_id, $match[1], $match[2], $match[4])
-                    : $this->receiptDetail($receipt_id, $match[1], $match[2], $match[4], ($add_page !== 'addpage'));
+                $post = (empty($this->request->GET('cp'))) 
+                    ? $this->receiptDetail($receipt_id, $match[1], $match[2], $match[4], ($add_page !== 'addpage'))
+                    : $this->cloneReceipt($receipt_id, $match[1], $match[2], $match[4], $this->request->GET('cp'));
             }
 
             if (empty($post['issue_date'])) {

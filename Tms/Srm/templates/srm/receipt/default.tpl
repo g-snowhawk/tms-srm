@@ -23,18 +23,24 @@
             {% endif %}
             </p>
           {% endif %}
-          <nav class="controls">
-          {% if unit.draft != '1' %}
-            <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}&amp;cp=1">複製</a>
-          {% endif %}
-          {% if apps.hasPermission('srm.update') %} 
-            <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}">明細表示</a>
-          {% endif %}
-          {% if unit.draft != '1' %}
-            <a href="?mode=srm.receipt.response:download-pdf&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}" target="_blank">PDF</a>
-          {% else %}
-            <span>下書き</span>
-          {% endif %}
+          <nav class="controls flex-block">
+            <div>
+              {% if unit.draft != '1' and duplicateTo is defined %}
+                {% for item in duplicateTo %}
+                  <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}&amp;cp={{ item.id }}">{{ item.label }}</a>
+                {% endfor %}
+              {% endif %}
+            </div>
+            <div>
+              {% if apps.hasPermission('srm.update') %} 
+                <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}">明細表示</a>
+              {% endif %}
+              {% if unit.draft != '1' %}
+                <a href="?mode=srm.receipt.response:download-pdf&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}" target="_blank">PDF</a>
+              {% else %}
+                <span>下書き</span>
+              {% endif %}
+            </div>
           </nav>
         </section>
       {% else %}

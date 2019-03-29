@@ -424,3 +424,8 @@ ul.button-list li a:hover {
   background: #39c;
   color: #fff;
 }
+#srm-receipt-default .section-list section nav.flex-block {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+}
