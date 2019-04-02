@@ -52,7 +52,7 @@ class Receipt extends \Tms\Srm
         $is_draft = (empty($post['s1_submit'])) ? '1' : '0'; 
         if (empty($post['receipt_number'])) {
             $post['receipt_number'] = $this->newReceiptNumber($post['issue_date'], $is_draft);
-        } elseif ($is_draft === '0') {
+        } elseif ($is_draft === '0' && $post['draft'] !== '0') {
             $post['new_receipt_number'] = $this->newReceiptNumber($post['issue_date'], $is_draft);
         }
 
