@@ -137,6 +137,7 @@
         <div class="separate-block">
           <span>
             <input type="submit" name="s1_submit" value="発行">
+            <input type="submit" name="s1_delete" value="削除" data-confirm="この{{ receiptName }}を削除します。取り消しはできませんが、よろしいですか？">
           </span>
           <span>
             <a href="?mode=srm.receipt.response" class="button">キャンセル<a>

@@ -25,6 +25,10 @@ class Receive extends Response
      */
     public function save() : bool
     {
+        if (!empty($this->request->param('s1_delete'))) {
+            return $this->remove();
+        }
+
         $redirect_type = 'redirect';
         $redirect_mode = (!empty($this->request->param('redirect_mode')))
             ? $this->request->param('redirect_mode')
@@ -59,8 +63,7 @@ class Receive extends Response
     /**
      * Remove the data receive interface.
      */
-    /*
-    public function remove()
+    public function remove(): bool
     {
         $redirect_type = 'redirect';
         $redirect_mode = (!empty($this->request->param('redirect_mode')))
@@ -84,7 +87,6 @@ class Receive extends Response
 
         $this->postReceived(\P5\Lang::translate($message_key), $status, $response, $options);
     }
-     */
 
     public function suggestClient()
     {
@@ -93,10 +95,18 @@ class Receive extends Response
 
         $keyword = str_replace([$ideographic_space,' '], '', $this->request->param('keyword'));
 
+        $collate = 'utf8_unicode_ci';
+        if (false !== $this->db->query("SHOW VARIABLES LIKE 'character_set_connection'")) {
+            $variables = $this->db->fetch();
+            if ($variables['value'] === 'utf8mb4') {
+                $collate = 'utf8mb4_unicode_ci';
+            }
+        }
+
         $clients = $this->db->select(
             'company,fullname,zipcode,address1,address2,division',
             'receipt_to',
-            "WHERE REPLACE(REPLACE(company,'$ideographic_space',' '),' ','') LIKE ? COLLATE utf8mb4_unicode_ci",
+            "WHERE REPLACE(REPLACE(company,'$ideographic_space',' '),' ','') LIKE ? COLLATE $collate",
             ["%$keyword%"]
         );
 

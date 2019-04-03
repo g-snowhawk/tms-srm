@@ -118,7 +118,18 @@ class Receipt extends \Tms\Srm
      */
     protected function remove() : bool
     {
-        return false;
+        $templatekey = $this->session->param('receipt_id');
+        $statement = 'userkey = ? AND templatekey = ? AND issue_date = ? AND receipt_number = ? AND draft = ?';
+        $options = [$this->uid, $templatekey, $this->request->param('issue_date'), $this->request->param('receipt_number'), '1'];
+
+        $this->db->begin();
+
+        if (false === $this->db->delete('receipt', $statement, $options)) {
+            $this->db->rollback();
+            return false;
+        }
+
+        return $this->db->commit();
     }
 
     private function saveClientData($post) : string

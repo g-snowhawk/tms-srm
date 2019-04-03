@@ -17,6 +17,7 @@ const displayTax = document.getElementById('tax');
 const inputAPrice = document.querySelector('input[name=additional_1_price]');
 const inputBPrice = document.querySelector('input[name=additional_2_price]');
 const inputCompany = document.querySelector('input[name=company]');
+const buttonDelete = document.querySelector('input[name=s1_delete]');
 
 const displayTaxRate = document.getElementById('tax-rate');
 const taxRate = (displayTaxRate) ? parseFloat(displayTaxRate.dataset.rate) : NaN;
@@ -62,6 +63,10 @@ function initializeReceiptEditor(event) {
     inputCompany.addEventListener('compostionstart', switchComposing);
     inputCompany.addEventListener('compostionend', switchComposing);
     inputCompany.addEventListener('blur', listenerForSuggestion);
+
+    if (buttonDelete) {
+        buttonDelete.addEventListener('click', confirmDeletion);
+    }
 
     const pulldowns = document.getElementsByClassName('with-other');
     for (let i = 0; i < pulldowns.length; i++) {
@@ -356,6 +361,18 @@ function lockForm() {
                     element.disabled = true;
                 }
             }
+        }
+    }
+}
+
+function confirmDeletion(event) {
+    const element = event.target;
+    if (element.dataset.confirm) {
+        if (confirm(element.dataset.confirm)) {
+            element.form.dataset.confirm = '';
+        }
+        else {
+            event.preventDefault();
         }
     }
 }
