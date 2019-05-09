@@ -492,11 +492,15 @@ class Receipt extends \Tms\Srm
                     list ($all, $method, $item, $comparison_operator, $value) = $match;
                     switch ($comparison_operator) {
                         case 'eq':
-                            $this->request->$method($item) === $value;
-                            continue 2;
+                            if ($this->request->$method($item) === $value) {
+                                continue 2;
+                            }
+                            break;
                         case 'ne':
-                            $this->request->$method($item) !== $value;
-                            continue 2;
+                            if ($this->request->$method($item) !== $value) {
+                                continue 2;
+                            }
+                            break;
                     }
                 }
             }
