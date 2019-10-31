@@ -756,7 +756,15 @@ class Receipt extends \Tms\Srm
             } else {
                 $page_number = 1;
             }
-            $receipt_data = array_merge($receipt_data, $this->receiptLines($templatekey, $receipt_data['issue_date'], $receipt_data['receipt_number'], $page_number));
+            $receipt_data = array_merge(
+                $receipt_data,
+                $this->receiptLines(
+                    $templatekey,
+                    $receipt_data['issue_date'],
+                    $receipt_data['receipt_number'],
+                    $page_number
+                )
+            );
         }
 
         return $receipt_data;
@@ -843,7 +851,7 @@ class Receipt extends \Tms\Srm
         if (!empty($destination) && $templatekey !== $destination) {
             $this->session->param('receipt_id', $destination);
             $this->session->clear('receipt_page');
-            parent::redirect("srm.receipt.response:edit\&id\={$clone_issue_date}:{$clone_receipt_number}");
+            parent::redirect("srm.receipt.response:edit\&id\={$clone_issue_date}:{$clone_receipt_number}\&draft\=1");
         }
 
         return $this->receiptDetail($templatekey, $clone_issue_date, $clone_receipt_number, $page_number, '1', true);
