@@ -98,7 +98,7 @@ class Receive extends Response
         $collate = 'utf8_unicode_ci';
         if (false !== $this->db->query("SHOW VARIABLES LIKE 'character_set_connection'")) {
             $variables = $this->db->fetch();
-            if ($variables['value'] === 'utf8mb4') {
+            if ($variables['Value'] === 'utf8mb4') {
                 $collate = 'utf8mb4_unicode_ci';
             }
         }

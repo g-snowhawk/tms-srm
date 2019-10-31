@@ -71,6 +71,7 @@ class Receipt extends \Tms\Srm
             $key_array[] = $this->session->param('receipt_id');
 
             // Output the receipt as a PDF
+            $after_follow = true;
             if (!empty($post['s1_submit']) && $post['draft'] === '1') {
                 if (false === $this->outputPdf($client_id, implode('-',$key_array))
                     || false === $this->removeDraftFlag($key_array)
@@ -100,7 +101,7 @@ class Receipt extends \Tms\Srm
                 }
             }
 
-            if (!isset($after_follow) || false !== $after_follow) {
+            if (false !== $after_follow) {
                 return $this->db->commit();
             }
         }

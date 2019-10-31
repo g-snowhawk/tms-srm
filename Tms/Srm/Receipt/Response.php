@@ -211,9 +211,10 @@ class Response extends \Tms\Srm\Receipt
             $post = [];
             if (preg_match("/^(\d{4}-\d{2}-\d{2}):(\d+)(:(\d+))?$/", $this->request->GET('id'), $match)) {
                 $draft = empty($this->request->GET('draft')) ? '0' : $this->request->GET('draft');
+                $page_number = (count($match) > 3) ? $match[4] : null;
                 $post = (empty($this->request->GET('cp'))) 
-                    ? $this->receiptDetail($receipt_id, $match[1], $match[2], $match[4], $draft, ($add_page !== 'addpage'))
-                    : $this->cloneReceipt($receipt_id, $match[1], $match[2], $match[4], $this->request->GET('cp'));
+                    ? $this->receiptDetail($receipt_id, $match[1], $match[2], $page_number, $draft, ($add_page !== 'addpage'))
+                    : $this->cloneReceipt($receipt_id, $match[1], $match[2], $page_number, $this->request->GET('cp'));
             }
 
             if (empty($post['issue_date'])) {
@@ -232,7 +233,7 @@ class Response extends \Tms\Srm\Receipt
             $post['page_number'] = (int)$page_count + 1;
         }
 
-        if ($post['page_number'] > 1) {
+        if (isset($post['page_number']) && $post['page_number'] > 1) {
             if (!empty($middlepage_line_count)) {
                 $receipt_detail_lines = $middlepage_line_count;
             }
