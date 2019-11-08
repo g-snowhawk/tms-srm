@@ -100,3 +100,17 @@ CREATE TABLE IF NOT EXISTS `TMS_receipt_detail` (
   CONSTRAINT `TMS_receipt_detail_ibfk_2` FOREIGN KEY (`templatekey`) REFERENCES `TMS_receipt_template` (`id`),
   CONSTRAINT `tms_receipt_detail_ibfk_3` FOREIGN KEY (`issue_date`, `receipt_number`, `userkey`, `templatekey`, `draft`) REFERENCES `tms_receipt` (`issue_date`, `receipt_number`, `userkey`, `templatekey`, `draft`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `TMS_tax_rates` (
+  `effective_date` date NOT NULL,
+  `area_code` varchar(32),
+  `tax_rate` decimal(3,2) NOT NULL,
+  `reduced_tax_rate` decimal(3,2) NOT NULL DEFAULT '0.00',
+  PRIMARY KEY (`effective_date`,`area_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `TMS_tax_rates` (`effective_date`,`area_code`,`tax_rate`,`reduced_tax_rate`) VALUES
+('1989-04-01','ja','0.03','0.00'),
+('1997-04-01','ja','0.05','0.00'),
+('2014-04-01','ja','0.08','0.00'),
+('2019-10-01','ja','0.10','0.08');

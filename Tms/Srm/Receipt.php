@@ -10,6 +10,8 @@
 
 namespace Tms\Srm;
 
+use DateTime;
+
 /**
  * Category management class.
  *
@@ -855,5 +857,29 @@ class Receipt extends \Tms\Srm
         }
 
         return $this->receiptDetail($templatekey, $clone_issue_date, $clone_receipt_number, $page_number, '1', true);
+    }
+
+    public function getTaxRate($kind, $issue_date) : float
+    {
+        if (false === property_exists($this, $kind)) {
+            throw new Exception($kind . ' is unknown proterty');
+        }
+
+        $date1 = new DateTime($issue_date);
+        $tax_rates = $this->db->select(
+            'effective_date,tax_rate,reduced_tax_rate',
+            'tax_rates',
+            'WHERE area_code = ? ORDER BY effective_date DESC',
+            [$this->app->cnf('srm:tax_locale')]
+        );
+
+        foreach ($tax_rates as $tax_rate) {
+            $date2 = new DateTime($tax_rate['effective_date']);
+            if ($date1 >= $date2) {
+                return $tax_rate[$kind];
+            }
+        }
+
+        return $this->$kind;
     }
 }

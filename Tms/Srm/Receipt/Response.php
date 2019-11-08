@@ -191,8 +191,6 @@ class Response extends \Tms\Srm\Receipt
         }
 
         $this->view->bind('receiptName', $receipt_name);
-        $this->view->bind('tax_rate', $this->tax_rate);
-        $this->view->bind('reduced_tax_rate', $this->reduced_tax_rate);
 
         $page_count = 0;
 
@@ -213,13 +211,31 @@ class Response extends \Tms\Srm\Receipt
                 $draft = empty($this->request->GET('draft')) ? '0' : $this->request->GET('draft');
                 $page_number = (count($match) > 3) ? $match[4] : null;
                 $post = (empty($this->request->GET('cp'))) 
-                    ? $this->receiptDetail($receipt_id, $match[1], $match[2], $page_number, $draft, ($add_page !== 'addpage'))
-                    : $this->cloneReceipt($receipt_id, $match[1], $match[2], $page_number, $this->request->GET('cp'));
+                    ? $this->receiptDetail(
+                        $receipt_id,
+                        $match[1],
+                        $match[2],
+                        $page_number,
+                        $draft,
+                        ($add_page !== 'addpage')
+                    )
+                    : $this->cloneReceipt(
+                        $receipt_id,
+                        $match[1],
+                        $match[2],
+                        $page_number,
+                        $this->request->GET('cp')
+                    );
             }
 
             if (empty($post['issue_date'])) {
                 $post['issue_date'] = date('Y-m-d');
             }
+        }
+
+        // Set the TaxRate by issue_date
+        foreach (['tax_rate','reduced_tax_rate'] as $kind) {
+            $this->view->bind($kind, $this->getTaxRate($kind, $post['issue_date']));
         }
 
         $page_count = $this->db->max(
