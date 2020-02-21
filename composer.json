@@ -4,8 +4,16 @@
     "type": "library",
     "description": "This package is sales receipt management system.",
     "license": "MIT",
+    "repositories": [
+        {
+            "name": "g-snowhawk/tms-core",
+            "type": "vcs",
+            "url": "https://github.com/g-snowhawk/tms-core.git"
+        }
+    ],
     "require": {
-        "php": ">=7.2.0"
+        "php": ">=7.2.0",
+        "g-snowhawk/tms-core": "dev-master"
     },
     "author": {
         "name": "Taka G",

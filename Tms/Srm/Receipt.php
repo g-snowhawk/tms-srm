@@ -162,7 +162,7 @@ class Receipt extends \Tms\Srm
         }
 
         $error_message = $this->db->error();
-        if (preg_match("/^Duplicate entry '(.+)' for key 'PRIMARY'$/", $error_message, $match)) {
+        if (preg_match("/^Duplicate entry '(.+)' for key '.*\.?PRIMARY'$/", $error_message, $match)) {
             return $client_id;
         }
 
@@ -232,7 +232,7 @@ class Receipt extends \Tms\Srm
             }
 
             $error_message = $this->db->error();
-            if (preg_match("/^Duplicate entry '(.+)' for key 'PRIMARY'$/", $error_message, $match)) {
+            if (preg_match("/^Duplicate entry '(.+)' for key '.*\.?PRIMARY'$/", $error_message, $match)) {
                 if (false === $this->db->update($table_name, $save, "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',page_number,'-',line_number,'-',draft) = ?", [$match[1]])) {
                     return false;
                 }
@@ -271,7 +271,7 @@ class Receipt extends \Tms\Srm
 
         if (false === $this->db->insert($table_name, $save)) {
             $error_message = $this->db->error();
-            if (preg_match("/^Duplicate entry '(.+)' for key 'PRIMARY'$/", $error_message, $match)) {
+            if (preg_match("/^Duplicate entry '(.+)' for key '.*\.?PRIMARY'$/", $error_message, $match)) {
                 if ($is_draft === '0' && isset($post['new_receipt_number'])) {
                     $save['receipt_number'] = $post['new_receipt_number'];
                 }
