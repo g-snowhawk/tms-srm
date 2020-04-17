@@ -123,4 +123,47 @@ class Receive extends Response
         echo json_encode($json_array);
         exit;
     }
+
+    public function unavailable($unavailable = "1")
+    {
+        if ($this->request->method !== 'post') {
+            trigger_error('Invalid operation', E_USER_ERROR);
+        }
+        
+        list($issue_date, $receipt_number) = explode(":", $this->request->param("id"));
+        $reason = $this->request->param("reason");
+        $templatekey = $this->session->param("receipt_id");
+
+        $redirect_type = "redirect";
+        $redirect_mode = (!empty($this->request->param("redirect_mode")))
+            ? $this->request->param("redirect_mode")
+            : self::REDIRECT_MODE;
+
+        $message_key = 'SUCCESS_UNAVAILABLE';
+        $status = 0;
+        $options = [];
+        $response = [[$this, 'redirect'], [$redirect_mode, $redirect_type]];
+
+        if ($unavailable === "0") {
+            $reason = null;
+            $message_key = 'SUCCESS_AVAILABLE';
+        }
+
+        if (false === $this->db->update(
+            "receipt", 
+            ["unavailable" => $unavailable, "unavailable_reason" => $reason],
+            "issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ?",
+            [$issue_date, $receipt_number, $this->uid, $templatekey]
+        )) {
+            $message_key = ($unavailable === "0") ? 'FAILED_UNAVAILABLE' : 'FAILED_AVAILABLE';
+            $status = 1;
+        }
+
+        $this->postReceived(\P5\Lang::translate($message_key), $status, $response, $options);
+    }
+
+    public function available()
+    {
+        self::unavailable("0");
+    }
 }

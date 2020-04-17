@@ -7,7 +7,7 @@
     <div class="wrapper section-list">
       <h1>{{ receiptName }}一覧</h1>
       {% for unit in receipts %}
-        <section>
+        <section{% if unit.unavailable == "1"%} class="unavailable"{% endif %}>
           <h2>{{ unit.subject }}</h2>
           <h3>{{ unit.company }}</h3>
           <p>No.{{ unit.receipt_number }}&nbsp;発行日：{{ unit.issue_date|date('Y年m月d日') }}</p>
@@ -25,7 +25,7 @@
           {% endif %}
           <nav class="controls flex-block">
             <div>
-              {% if unit.draft != '1' and duplicateTo is defined %}
+              {% if unit.draft != '1' and unit.unavailable != '1' and duplicateTo is defined %}
                 {% for item in duplicateTo %}
                   <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}&amp;cp={{ item.id }}">{{ item.label }}</a>
                 {% endfor %}
@@ -35,7 +35,9 @@
               {% if apps.hasPermission('srm.update') %} 
               <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}{% if unit.draft == '1'%}&amp;draft=1{% endif %}">明細表示</a>
               {% endif %}
-              {% if unit.draft != '1' %}
+              {% if unit.unavailable == '1' %}
+                <span>無効</span>
+              {% elseif unit.draft != '1' %}
                 <a href="?mode=srm.receipt.response:download-pdf&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}" target="_blank">PDF</a>
               {% else %}
                 <span>下書き</span>

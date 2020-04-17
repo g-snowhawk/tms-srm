@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS `TMS_receipt` (
   `additional_2_item` varchar(50) DEFAULT NULL,
   `additional_2_price` int(11) DEFAULT NULL,
   `note` text,
+  `unavailable` enum('0','1') NOT NULL DEFAULT '0',
+  `unavailable_reason` text,
   PRIMARY KEY (`issue_date`,`receipt_number`,`userkey`,`templatekey`,`draft`),
   KEY `TMS_receipt_ibfk_1` (`userkey`),
   KEY `TMS_receipt_ibfk_2` (`templatekey`),

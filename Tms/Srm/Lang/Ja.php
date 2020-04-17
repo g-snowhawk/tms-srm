@@ -26,4 +26,9 @@ class Ja extends \P5\Lang
     protected $APP_DETAIL    = self::ALT_NAME.'機能を提供します。';
     protected $SUCCESS_SETUP = self::ALT_NAME.'機能の追加に成功しました。';
     protected $FAILED_SETUP  = self::ALT_NAME.'機能の追加に失敗しました。';
+
+    const SUCCESS_UNAVAILABLE = "帳票を無効にしました";
+    const SUCCESS_AVAILABLE   = "帳票を有効にしました";
+    const FAILED_UNAVAILABLE  = "帳票を無効にできませんでした";
+    const FAILED_AVAILABLE    = "帳票を有効にできませんでした";
 }

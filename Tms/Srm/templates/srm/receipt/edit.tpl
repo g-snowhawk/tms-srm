@@ -151,6 +151,11 @@
           <p>
             <a href="?mode=srm.receipt.response" class="like-button">キャンセル<a>
             <a href="?mode=srm.receipt.response:download-pdf&amp;id={{ post.issue_date|date('Y-m-d') ~ ':' ~ post.receipt_number }}" target="_blank" class="like-button">PDF</a>
+            {% if post.unavailable == '0' %}
+            <a href="?mode=srm.receipt.receive:unavailable&amp;id={{ post.issue_date|date('Y-m-d') ~ ':' ~ post.receipt_number }}" class="like-button availables" data-prompt="無効にする理由" data-alert="理由がなければ無効にできません">無効にする</a>
+            {% else %}
+            <a href="?mode=srm.receipt.receive:available&amp;id={{ post.issue_date|date('Y-m-d') ~ ':' ~ post.receipt_number }}" class="like-button availables">有効にする</a>
+            {% endif %}
           </p>
         </div>
       {% endif %}

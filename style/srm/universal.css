@@ -424,8 +424,19 @@ ul.button-list li a:hover {
   background: #39c;
   color: #fff;
 }
+#receipt-edit a.availables {
+  margin-left: 2em;
+}
+
 #srm-receipt-default .section-list section nav.flex-block {
   display: flex;
   flex-direction: row-reverse;
   justify-content: space-between;
+}
+
+#srm-receipt-default .section-list section.unavailable h2,
+#srm-receipt-default .section-list section.unavailable h3,
+#srm-receipt-default .section-list section.unavailable h3 + p {
+  color: #999;
+  text-decoration: line-through;
 }

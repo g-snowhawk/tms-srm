@@ -70,7 +70,6 @@ class Response extends \Tms\Srm\Receipt
             );
             $this->view->bind('receipts', $receipts);
         } else {
-
             $type_of_receipt = null;
             if (!empty($receipt_id)) {
                 $receipt = $this->db->get('title,pdf_mapper', 'receipt_template', 'id = ?', [$receipt_id]);
@@ -107,7 +106,7 @@ class Response extends \Tms\Srm\Receipt
             }
 
             $statement = "SELECT r.issue_date,r.receipt_number,r.subject,r.draft,
-                r.due_date,r.receipt,
+                r.due_date,r.receipt,r.unavailable,
                 c.company,
                 $collected AS collected
                 FROM table::receipt AS r
@@ -287,6 +286,10 @@ class Response extends \Tms\Srm\Receipt
         $form = $globals['form'];
         $form['confirm'] = \P5\Lang::translate('CONFIRM_SAVE_DATA');
         $this->view->bind('form', $form);
+
+        if ($post["unavailable"] === "1") {
+            $this->appendHtmlClass('unavailable-receipt');
+        }
 
         $this->setHtmlId('receipt-edit');
         $this->view->render('srm/receipt/edit.tpl');
