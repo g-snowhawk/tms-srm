@@ -419,6 +419,32 @@ ul.button-list li a:hover {
 #srm-receipt-default .section-list section nav span {
   background: transparent;
 }
+#srm-receipt-default .explorer-list .footer-controls .flexbox {
+  align-items: center;
+  display: flex;
+}
+#srm-receipt-default input.search-query {
+  border-radius: 4px;
+  line-height: 1;
+  margin: auto .5em;
+  padding: 4px 20px 4px 4px;
+  vertical-align: middle;
+}
+#srm-receipt-default input.search-query + button.clear-search {
+  background: transparent url("clear-button.png") no-repeat 50% 50%;
+  background-size: contain;
+  border: 0 none transparent;
+  color: transparent;
+  font-size: 0;
+  height: 16px;
+  line-height: 1;
+  margin: 0 0 0 -26px;
+  min-width: initial;
+  padding: 0;
+  text-align: center;
+  width: 16px;
+}
+
 #receipt-edit a.like-button:hover,
 #srm-receipt-default .section-list section nav a:hover {
   background: #39c;

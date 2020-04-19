@@ -53,10 +53,12 @@
   <div class="fixed-box">
     <div class="explorer-list">
       <div class="footer-controls">
-        <nav class="links">
+        <nav class="links flexbox">
           {% if apps.hasPermission('srm.create') %} 
           <a href="?mode=srm.receipt.response:edit"><mark>＋</mark>新規{{ receiptName }}作成</a>
           {% endif %}
+          <input type="text" name="search_query" id="search-query-1" class="search-query"{% if queryString %} value="{{ queryString }}"{% endif %}>
+          <button type="reset" class="clear-search">×</button>
         </nav>
         <nav class="pagination">
           {% include 'pagination.tpl' with {'columnCount':'9'} %}
@@ -65,4 +67,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block pagefooter %}
+  <script src="/script/srm/receipt.js"></script>
 {% endblock %}

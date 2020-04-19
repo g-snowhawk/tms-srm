@@ -18,6 +18,9 @@ namespace Tms\Srm\Receipt;
  */
 class Response extends \Tms\Srm\Receipt
 {
+    const QUERY_STRING_KEY = 'receipt_search_condition';
+    const RECEIPT_PAGE_KEY = 'receipt_page';
+
     private $rows_per_page = 10;
 
     /**
@@ -51,12 +54,12 @@ class Response extends \Tms\Srm\Receipt
                 $receipt_name = $receipt['title'];
 
                 // Reset current page number
-                $this->session->param('receipt_page', 1);
+                $this->session->param(self::RECEIPT_PAGE_KEY, 1);
             }
         }
 
         if (!empty($this->request->param('p'))) {
-            $this->session->param('receipt_page', $this->request->param('p'));
+            $this->session->param(self::RECEIPT_PAGE_KEY, $this->request->param('p'));
         }
 
         $receipt_id = $this->session->param('receipt_id');
@@ -105,18 +108,27 @@ class Response extends \Tms\Srm\Receipt
                                END";
             }
 
-            $statement = "SELECT r.issue_date,r.receipt_number,r.subject,r.draft,
-                r.due_date,r.receipt,r.unavailable,
-                c.company,
-                $collected AS collected
-                FROM table::receipt AS r
-                JOIN table::receipt_to AS c
-                  ON r.client_id = c.id
-               WHERE r.userkey = ? AND r.templatekey = ? ORDER BY collected ASC,r.issue_date DESC,r.receipt_number DESC";
             $options = [$this->uid, $receipt_id];
+            $query_string = $this->getSearchCondition();
+            $receipt = 'table::receipt';
+            $filter = '';
+            include(__DIR__ . '/statement.php');
+            if (!empty($query_string)) {
+                $keywords = explode(' ', $query_string);
+                $filters = [];
+                foreach ($keywords as $keyword) {
+                    $filters[] = "%{$keyword}%";
+                }
+                $filter = implode(' AND ', array_fill(0, count($filters), 'filter LIKE ?'));
+                $options = array_merge($options, $filters);
+                include(__DIR__ . '/statement_search.php');
+
+                $this->view->bind('queryString', $query_string);
+                $this->session->param(self::QUERY_STRING_KEY, $query_string);
+            }
 
             // Pagenation
-            $current_page = (int)$this->session->param('receipt_page') ?: 1;
+            $current_page = (int)$this->session->param(self::RECEIPT_PAGE_KEY) ?: 1;
             $rows_per_page = (empty($this->session->param('rows_per_page_receipt_list')))
                 ? $this->rows_per_page
                 : (int)$this->session->param('rows_per_page_receipt_list');
@@ -324,5 +336,17 @@ class Response extends \Tms\Srm\Receipt
             readfile($pdf_path);
             exit;
         }
+    }
+
+    private function getSearchCondition(): ?string
+    {
+        $query_string = mb_convert_kana($this->request->param('q'), 's');
+        if (!$this->request->isset('q')) {
+            $query_string = $this->session->param(self::QUERY_STRING_KEY);
+        } elseif (empty($query_string)) {
+            $this->session->clear(self::QUERY_STRING_KEY);
+        }
+
+        return $query_string;
     }
 }
