@@ -19,6 +19,7 @@ namespace Tms\Srm\Receipt;
 class Response extends \Tms\Srm\Receipt
 {
     const QUERY_STRING_KEY = 'receipt_search_condition';
+    const SEARCH_OPTIONS_KEY = 'receipt_search_options';
     const RECEIPT_PAGE_KEY = 'receipt_page';
 
     private $rows_per_page = 10;
@@ -109,6 +110,19 @@ class Response extends \Tms\Srm\Receipt
             }
 
             $options = [$this->uid, $receipt_id];
+
+            $search_options = $this->session->param(self::SEARCH_OPTIONS_KEY) ?: ['andor' => 'AND'];
+            $between = '';
+            if (!empty($search_options['issue_date_start'])) {
+                $between .= ' AND r.issue_date >= ?';
+                $options[] = date('Y-m-d', strtotime($search_options['issue_date_start']));
+            }
+            if (!empty($search_options['issue_date_end'])) {
+                $between .= ' AND r.issue_date <= ?';
+                $options[] = date('Y-m-d', strtotime($search_options['issue_date_end']));
+            }
+            $andor = (!empty($search_options['andor'])) ? $search_options['andor'] : 'AND';
+
             $query_string = $this->getSearchCondition();
             $receipt = 'table::receipt';
             $filter = '';
@@ -119,7 +133,7 @@ class Response extends \Tms\Srm\Receipt
                 foreach ($keywords as $keyword) {
                     $filters[] = "%{$keyword}%";
                 }
-                $filter = implode(' AND ', array_fill(0, count($filters), 'filter LIKE ?'));
+                $filter = implode(" {$andor} ", array_fill(0, count($filters), 'filter LIKE ?'));
                 $options = array_merge($options, $filters);
                 include(__DIR__ . '/statement_search.php');
 
@@ -336,6 +350,20 @@ class Response extends \Tms\Srm\Receipt
             readfile($pdf_path);
             exit;
         }
+    }
+
+    public function searchOptions(): void
+    {
+        $search_options = $this->session->param(self::SEARCH_OPTIONS_KEY) ?: ['andor' => 'AND'];
+        $this->view->bind('post', $search_options);
+        $response = $this->view->render('srm/receipt/search_options.tpl', true);
+        $json = [
+            'status' => 200,
+            'response' => $response,
+        ];
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($json);
+        exit;
     }
 
     private function getSearchCondition(): ?string

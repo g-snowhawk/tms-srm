@@ -444,6 +444,19 @@ ul.button-list li a:hover {
   text-align: center;
   width: 16px;
 }
+#srm-receipt-default .explorer-list .footer-controls a.normal-link {
+  align-self: center;
+  background: transparent;
+  border-radius: 0;
+  display: inline;
+  height: auto;
+  margin: auto .8em;
+  padding: 0;
+  width: auto;
+}
+#srm-receipt-default .explorer-list .footer-controls a.options {
+  font-size: .75rem;
+}
 
 #receipt-edit a.like-button:hover,
 #srm-receipt-default .section-list section nav a:hover {

@@ -28,7 +28,7 @@ SELECT issue_date,receipt_number,subject,draft,
           FROM ({$receipt}) AS r
           JOIN table::receipt_to AS c
             ON r.client_id = c.id
-         WHERE r.userkey = ? AND r.templatekey = ?
+         WHERE r.userkey = ? AND r.templatekey = ?{$between}
        ) AS rc
  WHERE {$filter}
  ORDER BY collected ASC,issue_date DESC,receipt_number DESC

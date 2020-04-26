@@ -166,4 +166,30 @@ class Receive extends Response
     {
         self::unavailable("0");
     }
+
+    public function saveSearchOptions()
+    {
+        if ($this->request->param('submitter') !== 's1_clear') {
+            $andor = $this->request->param('andor');
+            if ($andor !== 'AND' && $andor !== 'OR') {
+                $andor = 'AND';
+            }
+            $search_options = [
+                'issue_date_start' => $this->request->param('issue_date_start'),
+                'issue_date_end' => $this->request->param('issue_date_end'),
+                'andor' => $andor,
+            ];
+            $this->session->param(parent::SEARCH_OPTIONS_KEY, $search_options);
+        } else {
+            $this->session->clear(parent::SEARCH_OPTIONS_KEY);
+        }
+
+        $response = [[$this, 'didSetSearchOptions'], []];
+        $this->postReceived('', 0, $response, []);
+    }
+
+    public function didSetSearchOptions()
+    {
+        return ['type' => 'close'];
+    }
 }
