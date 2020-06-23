@@ -367,6 +367,22 @@ class Receipt extends \Tms\Srm
             $bank['label'] = $pdf_mapper->bank->firstpage->account_holder->attributes()->label;
         }
 
+
+        $timestamp = strtotime($header['issue_date']);
+        $myname = [$signature['division'],$signature['fullname']];
+        $footer = [
+            'year' => date('Y', $timestamp),
+            'month' => date('n', $timestamp),
+            'day' => date('j', $timestamp),
+            'zipcode' => $signature['zipcode'],
+            'address1' => $signature['address1'],
+            'address2' => $signature['address2'],
+            'company' => $signature['company'],
+            'fullname' => $signature['fullname'],
+            'name' => implode('  ', $myname),
+        ];
+
+
         $page_numbers = array_keys($detail);
         $page_count = max($page_numbers);
 

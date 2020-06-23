@@ -11,7 +11,7 @@
           <h2>{{ unit.subject }}</h2>
           <h3>{{ unit.company }}</h3>
           <p>No.{{ unit.receipt_number }}&nbsp;発行日：{{ unit.issue_date|date('Y年m月d日') }}</p>
-          {% if typeOf == 'bill' %}
+          {% if typeOf == 'bill' or typeOf == 'receipt' %}
             <p class="bill-info">
             支払期限：<i>{{ unit.due_date|date('Y年m月d日') }}</i><br>
             {% if unit.collected == 1 %}
