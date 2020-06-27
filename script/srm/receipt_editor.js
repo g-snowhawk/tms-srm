@@ -19,6 +19,7 @@ const inputBPrice = document.querySelector('input[name=additional_2_price]');
 const inputCompany = document.querySelector('input[name=company]');
 const buttonDelete = document.querySelector('input[name=s1_delete]');
 const buttonAvailable = document.querySelector('a[class*=availables]');
+const buttonAddPage = document.querySelector('input[name=s1_addpage]');
 
 const displayTaxRate = document.getElementById('tax-rate');
 const taxRate = (displayTaxRate) ? parseFloat(displayTaxRate.dataset.rate) : NaN;
@@ -72,6 +73,15 @@ function initializeReceiptEditor(event) {
     if (buttonAvailable) {
         buttonAvailable.addEventListener('click', available);
     }
+
+    if (buttonAddPage) {
+        buttonAddPage.addEventListener('click', cancelConfirm);
+    }
+
+    const pageButtons = document.querySelectorAll('button.page-button');
+    pageButtons.forEach(element => {
+        element.addEventListener('click', cancelConfirm);
+    });
 
     const pulldowns = document.getElementsByClassName('with-other');
     for (let i = 0; i < pulldowns.length; i++) {
@@ -215,7 +225,11 @@ function culculateSubTotals(event) {
     for (i = 0; i < prices.length; i++) {
         let price = parseInt(prices[i].value);
         let n = i + 1;
-        let quantity = parseInt(document.querySelector('input[name=quantity\\[' + n + '\\]]').value);
+        const quantityElement = document.querySelector('input[name=quantity\\[' + n + '\\]]');
+        if (!quantityElement) {
+            continue;
+        }
+        let quantity = parseInt(quantityElement.value);
 
         const displaySum = document.getElementById('sum-' + n);
         if (isNaN(price) || isNaN(quantity)) {
@@ -476,4 +490,9 @@ function available(event) {
         alert(json.message);
     })
     .catch(error => console.error(error));
+}
+
+function cancelConfirm(event) {
+    const element = event.target;
+    delete element.form.dataset.confirm;
 }

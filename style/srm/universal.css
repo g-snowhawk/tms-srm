@@ -84,25 +84,34 @@ div.receipt-form .page-nav {
   display: flex;
   justify-content: flex-end;
 }
-div.receipt-form .page-nav a {
+div.receipt-form .page-nav .page-button {
   background: #efefef;
   border: 1px solid #ccc;
   border-top: 0 none transparent;
   border-bottom-left-radius: 4px;
   border-bottom-right-radius: 4px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
   color: inherit;
   display: inline-block;
   font-size: .7rem;
   margin-right: -1px;
-  padding: .3em .8em;
+  padding: .6em .8em;
   text-align: center;
   text-decoration: none;
+  line-height: 1;
+  min-width: auto;
 }
-div.receipt-form .page-nav a:hover {
+div.receipt-form .page-nav .page-button.current,
+div.receipt-form .page-nav .page-button:hover {
   background: #fff;
   color: #36c;
 }
-div.receipt-form .page-nav a:before {
+div.receipt-form .page-nav .page-button.current {
+  color: #000;
+  pointer-events: none;
+}
+div.receipt-form .page-nav .page-button.current:before {
   content: 'Page: ';
 }
 

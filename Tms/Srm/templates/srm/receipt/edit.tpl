@@ -1,6 +1,9 @@
 {% extends "master.tpl" %}
 
 {% block main %}
+  {% if pageCount > 1 %}
+    {% set currentPage = post.page_number is defined ? post.page_number : 1 %}
+  {% endif %}
   <input type="hidden" name="mode" value="srm.receipt.receive:save">
   <input type="hidden" name="draft" value="{% if post.draft is defined %}{{ post.draft }}{% else %}1{% endif %}">
   <p id="backlink"><a href="?mode=srm.receipt.response">{{ receiptName }}一覧に戻る</a></p>
@@ -11,8 +14,8 @@
         <p>
           {% if post.receipt_number is defined %}
           <span id="receipt-number">No.&thinsp;{{ post.receipt_number }}<input type="hidden" name="receipt_number" value="{{ post.receipt_number }}">
-            {%- if post.page_number is defined %}
-              <span id="page-number">&nbsp;:&nbsp;p{{ post.page_number }}<input type="hidden" name="page_number" value="{{ post.page_number }}">
+            {%- if post.page_number is defined or pageCount > 1 %}
+              <span id="page-number">&nbsp;:&nbsp;p{{ currentPage }}<input type="hidden" name="page_number" value="{{ post.page_number }}"></span>
             {% endif -%}
           </span><br>
           {% endif %}
@@ -91,26 +94,32 @@
           </tr>
         </tfoot>
         <tbody>
-          {% if carryForward is defined and carryForward > 0 %}
-            <tr class="carry-forward">
-              <td>前葉からの繰り越し</td>
-              <td class="ta-c"><span>*</span></td>
-              <td><input type="hidden" name="carry_forward" value="{{ carryForward }}"></td>
-              <td>&nbsp;</td>
-              <td><input type="hidden" name="carry_forward_tax" value="{{ carryForwardTax }}">&nbsp;</td>
-              <td><div id="sum-0"></div></td>
-            </tr>
-          {% endif %}
+          {# set carried = carryForward is defined and carryForward > 0 ? 1 : 0 #}
+          {% set carried = post.page_number > 1 and carryForwardTitle is defined ? 1 : 0 %}
           {% for i in 1..lineCount %}
-            {% set attr = i == 1 ? ' required' : '' %}
-            <tr>
-              <td><input type="text" name="content[{{ i }}]" value="{{ post.content[i] }}"{{ attr }}></td>
-              <td class="ta-c"><label class="hidden-checkbox"><input type="checkbox" name="reduced_tax_rate[{{ i }}]" value="1"{% if post.reduced_tax_rate[i] == '1' %} checked{% endif %}><span>*</span></label></td>
-              <td><input type="number" name="price[{{ i }}]" value="{{ post.price[i] }}"></td>
-              <td><input type="number" name="quantity[{{ i }}]" value="{{ post.quantity[i] }}"></td>
-              <td><input type="text" name="unit[{{ i }}]" value="{{ post.unit[i] }}"></td>
-              <td><div id="sum-{{ i }}"></div></td>
-            </tr>
+            {% set attr = (i == 2 and carried == 1) or i == 1 ? ' required' : '' %}
+            {% if i == 1 and carried == 1 %}
+              <tr class="carry-forward">
+                <td>{{ carryForwardTitle }}</td>
+                <td class="ta-c"><span>*</span></td>
+                <td>
+                  <input type="hidden" name="carry_forward" value="{{ carryForward }}">
+                  <input type="hidden" name="price[1]" value="0">
+                </td>
+                <td>&nbsp;</td>
+                <td><input type="hidden" name="carry_forward_tax" value="{{ carryForwardTax }}">&nbsp;</td>
+                <td><div id="sum-0"></div></td>
+              </tr>
+            {% else %}
+              <tr>
+                <td><input type="text" name="content[{{ i }}]" value="{{ post.content[i] }}"{{ attr }}></td>
+                <td class="ta-c"><label class="hidden-checkbox"><input type="checkbox" name="reduced_tax_rate[{{ i }}]" value="1"{% if post.reduced_tax_rate[i] == '1' %} checked{% endif %}><span>*</span></label></td>
+                <td><input type="number" name="price[{{ i }}]" value="{{ post.price[i] }}"></td>
+                <td><input type="number" name="quantity[{{ i }}]" value="{{ post.quantity[i] }}"></td>
+                <td><input type="text" name="unit[{{ i }}]" value="{{ post.unit[i] }}"></td>
+                <td><div id="sum-{{ i }}"></div></td>
+              </tr>
+            {% endif %}
           {% endfor %}
         </tbody>
       </table>
@@ -118,7 +127,11 @@
       {% if pageCount > 1 %}
       <nav class="page-nav">
         {% for i in range(1, pageCount) %}
-        <a href="?mode=srm.receipt.response:edit&id={{ post.issue_date }}:{{ post.receipt_number }}:{{ i }}">{{ i }}</a>
+          {% if post.draft != '0' %}
+            <button type="submit" name="move_page" value="{{ i }}" class="page-button{% if currentPage == i %} current{% endif %}">{{ i }}</button>
+          {% else %}
+            <a href="?mode=srm.receipt.response:edit&id={{ post.issue_date }}:{{ post.receipt_number }}:{{ i }}" class="page-button{% if currentPage == i %} current{% endif %}">{{ i }}</a>
+          {% endif %}
         {% endfor %}
       </nav>
       {% endif %}
@@ -140,7 +153,7 @@
             <input type="submit" name="s1_delete" value="削除" data-confirm="この{{ receiptName }}を削除します。取り消しはできませんが、よろしいですか？">
           </span>
           <span>
-            <a href="?mode=srm.receipt.response" class="button">キャンセル<a>
+            <a href="?mode=srm.receipt.response" class="button">キャンセル</a>
             <input type="submit" name="s1_draft" value="下書き保存">
             <input type="submit" name="s1_addpage" value="次葉の追加">
           </span>

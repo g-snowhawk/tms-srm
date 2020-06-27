@@ -31,5 +31,5 @@ SELECT issue_date,receipt_number,subject,draft,
          WHERE r.userkey = ? AND r.templatekey = ?{$between}
        ) AS rc
  WHERE {$filter}
- ORDER BY collected ASC,issue_date DESC,receipt_number DESC
+ ORDER BY draft DESC,collected ASC,issue_date DESC,receipt_number DESC
 SQL;

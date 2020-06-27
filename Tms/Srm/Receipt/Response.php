@@ -203,11 +203,20 @@ class Response extends \Tms\Srm\Receipt
                     $this->view->bind('extendedFields', $extended_fields);
                 }
 
-                $line_count = (int)$pdf_mapper->detail->attributes()->rows;
-                $middlepage_line_count = (int)$pdf_mapper->detail->attributes()->mrows;
+                if ($pdf_mapper->detail) {
+                    $line_count = (int)$pdf_mapper->detail->attributes()->rows;
+                    if ($line_count > 0) {
+                        $receipt_detail_lines = $line_count;
+                    }
 
-                if ($line_count > 0) {
-                    $receipt_detail_lines = $line_count;
+                    $middlepage_line_count = (int)$pdf_mapper->detail->attributes()->mrows;
+                }
+
+                if (isset($pdf_mapper->detail->attributes()->carryforward)) {
+                    $this->view->bind(
+                        'carryForwardTitle',
+                        (string)$pdf_mapper->detail->attributes()->carryforward
+                    );
                 }
             }
         }
@@ -222,6 +231,9 @@ class Response extends \Tms\Srm\Receipt
         if ($this->request->method === 'post') {
             $post = $this->request->POST();
             if ($add_page === 'addpage') {
+                if (!isset($post['receipt_number'])) {
+                    $post['receipt_number'] = $this->request->param('receipt_number');
+                }
                 unset(
                     $post['content'],
                     $post['price'],
@@ -249,7 +261,8 @@ class Response extends \Tms\Srm\Receipt
                         $match[1],
                         $match[2],
                         $page_number,
-                        $this->request->GET('cp')
+                        $this->request->GET('cp'),
+                        $draft
                     );
             }
 
@@ -258,20 +271,41 @@ class Response extends \Tms\Srm\Receipt
             }
         }
 
+        if (isset($post['receipt_number'])) {
+            if (!isset($draft)) {
+                $draft = '1';
+            }
+            $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND draft = ?';
+            $replace = [$post['issue_date'], $post['receipt_number'], $this->uid, $receipt_id, $draft];
+            $page_count = $this->db->max(
+                'page_number',
+                'receipt_detail',
+                $statement,
+                $replace
+            );
+
+            $post['note'] = $this->db->get(
+                'content',
+                'receipt_note',
+                $statement,
+                $replace
+            );
+        }
+
         // Set the TaxRate by issue_date
         foreach (['tax_rate','reduced_tax_rate'] as $kind) {
             $this->view->bind($kind, $this->getTaxRate($kind, $post['issue_date']));
         }
 
-        $page_count = $this->db->max(
-            'page_number',
-            'receipt_detail',
-            'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ?',
-            [$post['issue_date'], $post['receipt_number'], $this->uid, $receipt_id]
-        );
+        $draft = $this->request->param('draft');
+        if (empty($draft)) {
+            $draft = '0';
+        }
+
 
         if ($add_page === 'addpage') {
-            $post['page_number'] = (int)$page_count + 1;
+            $page_count = (int)$page_count + 1;
+            $post['page_number'] = $page_count;
         }
 
         if (isset($post['page_number']) && $post['page_number'] > 1) {
@@ -313,7 +347,7 @@ class Response extends \Tms\Srm\Receipt
         $form['confirm'] = \P5\Lang::translate('CONFIRM_SAVE_DATA');
         $this->view->bind('form', $form);
 
-        if ($post["unavailable"] === "1") {
+        if (isset($post["unavailable"]) && $post["unavailable"] === "1") {
             $this->appendHtmlClass('unavailable-receipt');
         }
 

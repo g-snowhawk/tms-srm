@@ -57,6 +57,16 @@ class Receive extends Response
             $response = [[$this, 'edit'], ['addpage']];
         }
 
+        elseif (!empty($this->request->param('move_page'))) {
+            $redirect_mode .= sprintf(':edit&id=%s:%d:%d&draft=1',
+                date('Y-m-d', strtotime($this->request->param('issue_date'))),
+                $this->request->param('receipt_number'),
+                $this->request->param('move_page')
+            );
+            $url = $this->app->systemURI()."?mode=$redirect_mode";
+            \P5\Http::redirect($url);
+        }
+
         $this->postReceived(\P5\Lang::translate($message_key), $status, $response, $options);
     }
 

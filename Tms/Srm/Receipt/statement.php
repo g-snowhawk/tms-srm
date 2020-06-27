@@ -8,5 +8,5 @@ SELECT r.issue_date,r.receipt_number,r.subject,r.draft,
   JOIN table::receipt_to AS c
     ON r.client_id = c.id
  WHERE r.userkey = ? AND r.templatekey = ?{$between}
- ORDER BY collected ASC,r.issue_date DESC,r.receipt_number DESC
+ ORDER BY r.draft DESC,collected ASC,r.issue_date DESC,r.receipt_number DESC
 SQL;

@@ -61,9 +61,14 @@ class Receipt extends \Tms\Srm
         if (0 !== ($client_id = $this->saveClientData($post))
             && false !== $this->saveReceipt($client_id, $post, $is_draft)
             && false !== $this->saveReceiptDetails($post, $is_draft)
+            && false !== $this->saveReceiptNote($post, $is_draft)
         ) {
             if (isset($post['new_receipt_number'])) {
                 $post['receipt_number'] = $post['new_receipt_number'];
+            }
+
+            if (isset($post['s1_addpage'])) {
+                $this->request->param('receipt_number', $post['receipt_number']);
             }
 
             $key_array = [];
@@ -189,7 +194,7 @@ class Receipt extends \Tms\Srm
             'page_number' => $page_number,
         ];
 
-        if ($post['s1_submit'] === 'via JS') {
+        if (isset($post['s1_submit']) && $post['s1_submit'] === 'via JS') {
             $save['draft'] = $is_draft;
         }
 
@@ -197,8 +202,8 @@ class Receipt extends \Tms\Srm
             if (empty($post['content'][$line_number]) && empty($post['price'][$line_number])) {
                 if (false === $this->db->delete(
                     $table_name,
-                    'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND page_number = ? AND line_number = ?',
-                    [$save['issue_date'], $save['receipt_number'], $save['userkey'], $save['templatekey'], $save['page_number'], $line_number]
+                    'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND page_number = ? AND line_number = ? AND draft = ?',
+                    [$save['issue_date'], $save['receipt_number'], $save['userkey'], $save['templatekey'], $save['page_number'], $line_number, '1']
                 )) {
                     return false;
                 }
@@ -227,20 +232,79 @@ class Receipt extends \Tms\Srm
                 }
             }
 
-            if (false !== $this->db->insert($table_name, $save)) {
-                continue;
-            }
-
-            $error_message = $this->db->error();
-            if (preg_match("/^Duplicate entry '(.+)' for key '.*\.?PRIMARY'$/", $error_message, $match)) {
-                if (false === $this->db->update($table_name, $save, "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',page_number,'-',line_number,'-',draft) = ?", [$match[1]])) {
+            $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND draft = ? AND page_number = ? AND line_number = ?';
+            $replace = [
+                $post['issue_date'],
+                $save['receipt_number'],
+                $this->uid,
+                $save['templatekey'],
+                $is_draft,
+                $save['page_number'],
+                $save['line_number'],
+            ];
+            if ($this->db->exists($table_name, $statement, $replace)) {
+                if (false === $this->db->update($table_name, $save, $statement, $replace)) {
                     return false;
                 }
             } else {
-                return false;
+                if ($is_draft === '0') {
+                    $save['draft'] = '0';
+                }
+                if (false === $this->db->insert($table_name, $save)) {
+                    return false;
+                }
             }
         }
 
+        return true;
+    }
+
+    private function saveReceiptNote($post, $is_draft) : bool
+    {
+        $receipt_id = $this->session->param('receipt_id');
+
+        $page_number = $this->request->param('page_number');
+        if (empty($page_number)) $page_number = 1;
+
+        $table_name = 'receipt_note';
+        $receipt_number_key = (isset($post['new_receipt_number']))
+            ? 'new_receipt_number' : 'receipt_number';
+
+        $save = [
+            'issue_date' => $post['issue_date'],
+            'receipt_number' => $post[$receipt_number_key],
+            'userkey' => $this->uid,
+            'templatekey' => $receipt_id,
+            'page_number' => $page_number,
+            'content' => $post['note'],
+        ];
+
+        $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND draft = ? AND page_number = ?';
+        $replace = [
+            $post['issue_date'],
+            $save['receipt_number'],
+            $this->uid,
+            $save['templatekey'],
+            $is_draft,
+            $save['page_number'],
+        ];
+        if ($this->db->exists($table_name, $statement, $replace)) {
+            if (empty($post['note'])) {
+                return $this->db->delete($table_name, $statement, $replace);
+            }
+
+            if (false === $this->db->update($table_name, $save, $statement, $replace)) {
+                return false;
+            }
+        } else {
+            if ($is_draft === '0') {
+                $save['draft'] = '0';
+            }
+            if (false === $this->db->insert($table_name, $save)) {
+                return false;
+            }
+        }
+        
         return true;
     }
 
@@ -256,6 +320,7 @@ class Receipt extends \Tms\Srm
             'templatekey' => $receipt_id,
             'client_id' => $client_id,
         ];
+
         $system_managed_columns = array_keys($save);
         foreach ($table_columns as $column => $property) {
             if (in_array($column, $system_managed_columns)) {
@@ -269,16 +334,23 @@ class Receipt extends \Tms\Srm
             }
         }
 
-        if (false === $this->db->insert($table_name, $save)) {
-            $error_message = $this->db->error();
-            if (preg_match("/^Duplicate entry '(.+)' for key '.*\.?PRIMARY'$/", $error_message, $match)) {
-                if ($is_draft === '0' && isset($post['new_receipt_number'])) {
-                    $save['receipt_number'] = $post['new_receipt_number'];
-                }
-                if (false === $this->db->update($table_name, $save, "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$match[1]])) {
-                    return false;
-                }
+        $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND draft = ?';
+        $replace = [$post['issue_date'],$save['receipt_number'],$this->uid,$save['templatekey'],'1'];
+
+        if (isset($post['new_receipt_number'])) {
+            $save['receipt_number'] = $post['new_receipt_number'];
+        }
+
+        if ($is_draft === '0') {
+            $save['draft'] = $is_draft;
+        }
+
+        if ($this->db->exists($table_name, $statement, $replace)) {
+            if (false === $this->db->update($table_name, $save, $statement, $replace)) {
+                return false;
             }
+        } elseif (false === $this->db->insert($table_name, $save)) {
+            return false;
         }
 
         return true;
@@ -355,9 +427,11 @@ class Receipt extends \Tms\Srm
         $this->current_receipt_type = (string)$pdf_mapper->attributes()->typeof;
         $line_count = (int)$pdf_mapper->detail->attributes()->rows;
         $middlepage_line_count = (int)$pdf_mapper->detail->attributes()->mrows;
+        $carry_forward = (isset($pdf_mapper->detail->attributes()->carryforward))
+            ? (string)$pdf_mapper->detail->attributes()->carryforward : null;
 
         $header = $this->db->get('*', 'receipt', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey) = ?", [$receiptkey]);
-        $detail = $this->receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, $header);
+        $detail = $this->receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, $carry_forward, $header);
         $client = $this->db->get('*', 'receipt_to', "id = ? AND userkey = ?", [$client_id, $this->uid]);
         $signature = $this->signatureForPdf($this->userinfo);
 
@@ -367,6 +441,10 @@ class Receipt extends \Tms\Srm
             $bank['label'] = $pdf_mapper->bank->firstpage->account_holder->attributes()->label;
         }
 
+        $header['note'] = $this->db->get('content', 'receipt_note', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", ["{$receiptkey}-0"]);
+        if (!empty($header['note'])) {
+            $header['note'] = nl2br(preg_replace("/(\r\n|\r)/", "\n", $header['note']));
+        }
 
         $timestamp = strtotime($header['issue_date']);
         $myname = [$signature['division'],$signature['fullname']];
@@ -422,7 +500,11 @@ class Receipt extends \Tms\Srm
                 if ($node_name === 'detail') {
                     $y = $child_node->attributes()->start;
                     if ($page_number > 1 && $middlepage_line_count !== $line_count) {
-                        $y -= ($middlepage_line_count - $line_count) * $child_node->attributes()->lineheight;
+                        if (isset($child_node->attributes()->mstart)) {
+                            $y = (float)$child_node->attributes()->mstart;
+                        } else {
+                            $y -= ($middlepage_line_count - $line_count) * $child_node->attributes()->lineheight;
+                        }
                     }
                     $end = ($page_number == 1) ? $line_count : $middlepage_line_count;
                     $search_values = array_column($detail[$page_number], 'line_number');
@@ -540,8 +622,61 @@ class Receipt extends \Tms\Srm
                 if ($page === (int)$child_node->attributes()->more) {
                     continue;
                 }
+
+                $single_page_attributes = null;
+                if (!empty($child_node->SinglePageAttributes)) {
+                    $single_page_attributes = get_object_vars($child_node->SinglePageAttributes);
+                }
+
                 if ($page === $count) {
-                    $return_value = array_merge($return_value, self::pdfMapping(get_object_vars($child_node), $page, $count, $files));
+                    $single = [];
+                    if ($page === 1 && !is_null($single_page_attributes)) {
+                        foreach ($single_page_attributes as $n => $i_node) {
+                            $single[$n] = [];
+                            foreach ($i_node->attributes() as $key => $attr) {
+                                switch ($key) {
+                                case 'prefix':
+                                case 'suffix':
+                                case 'font':
+                                case 'align':
+                                case 'valign':
+                                case 'style':
+                                case 'size':
+                                case 'type':
+                                    $single[$n][$key] = (string)$attr;
+                                    break;
+                                case 'border':
+                                    $single[$n][$key] = (int)$attr;
+                                    break;
+                                case 'pitch':
+                                case 'x':
+                                case 'y':
+                                case 'width':
+                                case 'height':
+                                case 'maxh':
+                                    $single[$n][$key] = (float)$attr;
+                                    break;
+                                case 'color':
+                                case 'poly':
+                                    $single[$n][$key] = \Tms\Pdf::mapAttrToArray((string)$attr);
+                                    break;
+                                case 'flg':
+                                case 'ishtml':
+                                    $single[$n][$key] = \Tms\Pdf::mapAttrToBoolean((string)$attr);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    unset($child_node->SinglePageAttributes);
+                    $map = self::pdfMapping(get_object_vars($child_node), $page, $count, $files);
+                    foreach ($map as &$unit) {
+                        if (isset($single[$unit['name']])) {
+                            $unit = array_merge($unit, $single[$unit['name']]);
+                        }
+                    }
+                    unset($unit);
+                    $return_value = array_merge($return_value, $map);
                 }
                 continue;
             }
@@ -562,8 +697,23 @@ class Receipt extends \Tms\Srm
                 'height' => (float)$child_node->attributes()->height,
                 'type' => (string)$child_node->attributes()->type,
                 'flg' => \Tms\Pdf::mapAttrToBoolean((string)$child_node->attributes()->flg),
-                'poly' => \Tms\Pdf::mapAttrToArray((string)$child_node->attributes()->poly)
+                'poly' => \Tms\Pdf::mapAttrToArray((string)$child_node->attributes()->poly),
+                'border' => (int)$child_node->attributes()->border
             ];
+
+            if ($child_node->attributes()->ishtml) {
+                $value['ishtml'] = \Tms\Pdf::mapAttrToBoolean(
+                    (string)$child_node->attributes()->ishtml
+                );
+            }
+
+            if ($child_node->attributes()->maxh) {
+                $value['maxh'] = (float)$child_node->attributes()->maxh;
+            }
+
+            if ($child_node->attributes()->valign) {
+                $value['valign'] = (string)$child_node->attributes()->valign;
+            }
 
             if ($child_node->attributes()->format) {
                 $value['format'] = (string)$child_node->attributes()->format;
@@ -579,7 +729,7 @@ class Receipt extends \Tms\Srm
         return $return_value;
     }
 
-    private function receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, &$header)
+    private function receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, $carry_forward, &$header)
     {
         $detail = $this->db->select('*', 'receipt_detail', "WHERE CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey) = ? ORDER BY `page_number`,`line_number`", [$receiptkey]);
 
@@ -588,8 +738,23 @@ class Receipt extends \Tms\Srm
         // Culcuration totals
         $subtotal = 0;
         $tax = 0;
+        $before_page_number = 1;
         foreach ($detail as $unit) {
-            $line_number = $unit['line_number'];
+            $page_number = (int)$unit['page_number'];
+            $line_number = (int)$unit['line_number'];
+
+            if (!is_null($carry_forward) && $page_number !== $before_page_number && $line_number > 1) {
+                $return_value[$page_number][] = [
+                    'page_number' => $page_number,
+                    'line_number' => 1,
+                    'content' => $carry_forward,
+                    'price' => '',
+                    'quantity' => '',
+                    'unit' => '',
+                    'sum' => $subtotal,
+                ];
+            }
+
             if ($line_number > $line_count && ($line_number - $line_count) % $middlepage_line_count === 1) {
                 $unit['sum'] = $subtotal;
             } else {
@@ -599,10 +764,11 @@ class Receipt extends \Tms\Srm
                 $unit['sum'] = (is_null($unit['price']) && empty($sum)) ? NULL : $sum;
             }
 
-            if (!isset($return_value[$unit['page_number']])) {
-                $return_value[$unit['page_number']] = [];
+            if (!isset($return_value[$page_number])) {
+                $return_value[$page_number] = [];
             }
-            $return_value[$unit['page_number']][] = $unit;
+            $return_value[$page_number][] = $unit;
+            $before_page_number = $page_number;
         }
 
         $header['subtotal'] = $subtotal;
@@ -780,7 +946,8 @@ class Receipt extends \Tms\Srm
                     $templatekey,
                     $receipt_data['issue_date'],
                     $receipt_data['receipt_number'],
-                    $page_number
+                    $page_number,
+                    $draft
                 )
             );
         }
@@ -788,14 +955,14 @@ class Receipt extends \Tms\Srm
         return $receipt_data;
     }
 
-    protected function receiptLines($templatekey, $issue_date, $receipt_number, $page_number): array
+    protected function receiptLines($templatekey, $issue_date, $receipt_number, $page_number, $draft): array
     {
         $return_value = [];
         $lines = $this->db->select(
             'line_number,content,price,quantity,tax_rate,unit',
             'receipt_detail',
-            'WHERE issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND page_number = ?',
-            [$issue_date, $receipt_number, $this->uid, $templatekey, $page_number]
+            'WHERE issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND page_number = ? AND draft = ?',
+            [$issue_date, $receipt_number, $this->uid, $templatekey, $page_number, $draft]
         );
 
         foreach ((array)$lines as $line) {
@@ -828,7 +995,7 @@ class Receipt extends \Tms\Srm
         );
     }
 
-    protected function cloneReceipt($templatekey, $issue_date, $receipt_number, $page_number, $destination = null)
+    protected function cloneReceipt($templatekey, $issue_date, $receipt_number, $page_number, $destination = null, &$draft)
     {
         $this->db->begin();
 
@@ -854,7 +1021,7 @@ class Receipt extends \Tms\Srm
                                  SELECT " . implode(',', $columns) . " 
                                    FROM table::{$table_name}
                                   WHERE issue_date = ? AND receipt_number = ?
-                                    AND userkey = ? AND templatekey = ?";
+                                    AND userkey = ? AND templatekey = ? AND draft = '0'";
             $options = [
                 $clone_issue_date, $clone_receipt_number,
                 $issue_date, $receipt_number, $this->uid, $templatekey
@@ -865,6 +1032,12 @@ class Receipt extends \Tms\Srm
         }
 
         $this->db->commit();
+
+        $draft = '1';
+
+        if (empty($this->request->param('receipt_number'))) {
+            $this->request->param('receipt_number', $clone_receipt_number);
+        }
 
         if (!empty($destination) && $templatekey !== $destination) {
             $this->session->param('receipt_id', $destination);

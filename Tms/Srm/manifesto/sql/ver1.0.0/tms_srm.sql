@@ -68,7 +68,6 @@ CREATE TABLE IF NOT EXISTS `TMS_receipt` (
   `additional_1_price` int(11) DEFAULT NULL,
   `additional_2_item` varchar(50) DEFAULT NULL,
   `additional_2_price` int(11) DEFAULT NULL,
-  `note` text,
   `unavailable` enum('0','1') NOT NULL DEFAULT '0',
   `unavailable_reason` text,
   PRIMARY KEY (`issue_date`,`receipt_number`,`userkey`,`templatekey`,`draft`),
@@ -86,21 +85,38 @@ CREATE TABLE IF NOT EXISTS `TMS_receipt_detail` (
   `receipt_number` int(11) unsigned NOT NULL,
   `userkey` int(11) unsigned NOT NULL,
   `templatekey` int(11) unsigned NOT NULL,
+  `draft` enum('0','1') NOT NULL DEFAULT '1',
   `page_number` tinyint(3) unsigned NOT NULL,
   `line_number` tinyint(3) unsigned NOT NULL,
-  `draft` enum('0','1') NOT NULL DEFAULT '1',
   `content` varchar(66) DEFAULT NULL,
   `price` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT NULL,
   `tax_rate` decimal(3,2) DEFAULT NULL,
   `unit` varchar(10) DEFAULT NULL,
-  PRIMARY KEY (`issue_date`,`receipt_number`,`userkey`,`templatekey`,`page_number`,`line_number`,`draft`),
+  PRIMARY KEY (`issue_date`,`receipt_number`,`userkey`,`templatekey`,`draft`,`page_number`,`line_number`),
   KEY `TMS_receipt_detail_ibfk_1` (`userkey`),
   KEY `TMS_receipt_detail_ibfk_2` (`templatekey`),
   KEY `TMS_receipt_detail_ibfk_3` (`issue_date`,`receipt_number`,`userkey`,`templatekey`,`draft`),
   CONSTRAINT `TMS_receipt_detail_ibfk_1` FOREIGN KEY (`userkey`) REFERENCES `TMS_user` (`id`),
   CONSTRAINT `TMS_receipt_detail_ibfk_2` FOREIGN KEY (`templatekey`) REFERENCES `TMS_receipt_template` (`id`),
   CONSTRAINT `tms_receipt_detail_ibfk_3` FOREIGN KEY (`issue_date`, `receipt_number`, `userkey`, `templatekey`, `draft`) REFERENCES `tms_receipt` (`issue_date`, `receipt_number`, `userkey`, `templatekey`, `draft`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `TMS_receipt_note` (
+  `issue_date` date NOT NULL,
+  `receipt_number` int(11) unsigned NOT NULL,
+  `userkey` int(11) unsigned NOT NULL,
+  `templatekey` int(11) unsigned NOT NULL,
+  `draft` enum('0','1') NOT NULL DEFAULT '1',
+  `page_number` tinyint(3) unsigned NOT NULL,
+  `content` text,
+  PRIMARY KEY (`issue_date`,`receipt_number`,`userkey`,`templatekey`,`draft`,`page_number`),
+  KEY `TMS_receipt_note_ibfk_1` (`userkey`),
+  KEY `TMS_receipt_note_ibfk_2` (`templatekey`),
+  KEY `TMS_receipt_note_ibfk_3` (`issue_date`,`receipt_number`,`userkey`,`templatekey`,`draft`),
+  CONSTRAINT `TMS_receipt_note_ibfk_1` FOREIGN KEY (`userkey`) REFERENCES `TMS_user` (`id`),
+  CONSTRAINT `TMS_receipt_note_ibfk_2` FOREIGN KEY (`templatekey`) REFERENCES `TMS_receipt_template` (`id`),
+  CONSTRAINT `tms_receipt_note_ibfk_3` FOREIGN KEY (`issue_date`, `receipt_number`, `userkey`, `templatekey`, `draft`) REFERENCES `tms_receipt` (`issue_date`, `receipt_number`, `userkey`, `templatekey`, `draft`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `TMS_tax_rates` (
