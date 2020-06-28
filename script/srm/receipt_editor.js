@@ -37,9 +37,10 @@ const suggestionDataClassName = 'client-data';
 let suggestionListLock = false;
 let suggestionTimer = 0;
 let suggestionTimeout = 800;
-let suggestionBrowser = new AbortController();
+let fetchCanceller = new AbortController();
 let valueAtKeyDown = undefined;
 let isComposing = false;
+let isFetching = false;
 
 switch (document.readyState) {
     case 'loading' :
@@ -62,9 +63,10 @@ function initializeReceiptEditor(event) {
 
     inputCompany.addEventListener('keydown', listenerForSuggestion);
     inputCompany.addEventListener('keyup', listenerForSuggestion);
-    inputCompany.addEventListener('compostionstart', switchComposing);
-    inputCompany.addEventListener('compostionend', switchComposing);
+    inputCompany.addEventListener('compositionstart', switchComposing);
+    inputCompany.addEventListener('compositionend', switchComposing);
     inputCompany.addEventListener('blur', listenerForSuggestion);
+    inputCompany.addEventListener('focus', listenerForSuggestion);
 
     if (buttonDelete) {
         buttonDelete.addEventListener('click', confirmDeletion);
@@ -272,6 +274,27 @@ function autoFillClientData(event) {
     const anchor = event.currentTarget;
     const form = inputCompany.form;
 
+    for (const key in anchor.dataset) {
+        if (form[key]) {
+            const element = form[key];
+            if (element.nodeName.toLowerCase() === 'select') {
+                for (let i = 0; i < element.options.length; i++) {
+                    const option = element.options[i];
+                    if (option.dataset.other === 'isOther') {
+                        continue;
+                    }
+                    option.selected = (option.value === anchor.dataset[key]);
+                }
+                if (element.selectedIndex && parseInt(element.dataset.currentIndex) !== element.selectedIndex) {
+                    element.classList.remove('default');
+                    element.dataset.currentIndex = element.selectedIndex;
+                }
+            } else {
+                element.value = anchor.dataset[key];
+            }
+        }
+    }
+
     const nodeList = anchor.getElementsByClassName(suggestionDataClassName);
 
     for (let node of nodeList) {
@@ -330,18 +353,18 @@ function displaySuggestionList(source) {
     window.addEventListener('mouseup', hideSuggestionList);
 }
 
-function suggestComplete(response) {
-    response.json().then(function(data){
-
-        if (debugLevel > 0) {
-            console.log(data);
-        }
-
-        if (data.status === 0) {
-            displaySuggestionList(data.source);
-        }
-    }).catch(error => console.error(error));
-}
+//function suggestComplete(response) {
+//    response.json().then(function(data){
+//
+//        if (debugLevel > 0) {
+//            console.log(data);
+//        }
+//
+//        if (data.status === 0) {
+//            displaySuggestionList(data.source);
+//        }
+//    }).catch(error => console.error(error));
+//}
 
 function suggestClient() {
     if (inputCompany.value === '') {
@@ -360,20 +383,47 @@ function suggestClient() {
     data.append('keyword', inputCompany.value);
     data.append('mode', 'srm.receipt.receive:suggest-client');
 
-    suggestionBrowser.abort();
-    const signal = suggestionBrowser.signal;
+    if (isFetching) {
+        fetchCanceller.abort();
+        isFetching = false;
+    }
 
+    isFetching = true;
     fetch(form.action, {
+        signal: fetchCanceller.signal,
         method: 'POST',
         credentials: 'same-origin',
         body: data,
-    }).then(
-        suggestComplete
-    ).catch(error => console.error(error));
+    }).then(response => {
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
+            }
+            throw new Error('Unexpected response'.translate());
+        } else {
+            throw new Error('Server Error'.translate());
+        }
+    }).then(json => {
+        if (json.status === 0) {
+            displaySuggestionList(json.source);
+        } else {
+            throw new Error(json.message);
+        }
+    }).catch(error => {
+        if (error.name === 'AbortError') {
+            console.warn("Aborted!!");
+            fetchCanceller = new AbortController()
+        } else {
+            console.error(error)
+        }
+    }).then(() => {
+        isFetching = false;
+    });
 }
 
 function switchComposing(event) {
-    isComposing = (event.type === 'compostionstart');
+    isComposing = false; /*(event.type !== 'compositionend');*/
 }
 
 function switchSuggestionListLock(event) {
@@ -391,24 +441,15 @@ function listenerForSuggestion(event) {
         case 'blur':
             displaySuggestionList('');
             break;
-        case 'keydown':
-            valueAtKeyDown = inputedValue;
-            break;
         case 'keyup':
             if (event.key === 'ArrowDown'
+                || event.key === inputedValue
                 || (!isComposing && valueAtKeyDown !== inputedValue)
             ) {
-                clearTimeout(suggestionTimer);
-                suggestionTimer = setTimeout(suggestClient, suggestionTimeout);
+                suggestClient();
             }
-
-            else {
-                if (debugLevel > 0) {
-                    console.log(event.key);
-                }
-            }
-
-            valueAtKeyDown = undefined;
+        case 'focus':
+            valueAtKeyDown = inputedValue;
             break;
     }
 }
@@ -474,15 +515,32 @@ function available(event) {
         data.append('reason', reason);
     }
 
+    if (isFetching) {
+        fetchCanceller.abort();
+        isFetching = false;
+    }
+
+    isFetching = true;
     fetch(form.action, {
+        signal: fetchCanceller.signal,
         method: 'POST',
         credentials: 'same-origin',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
         },
         body: data,
-    }).then(response => response.json())
-    .then((json) => {
+    }).then(response => { 
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
+            }
+            throw new Error('Unexpected response'.translate());
+        } else {
+            throw new Error('Server Error'.translate());
+        }
+    })
+    .then(json => {
         if (json.status == 0) {
             switch (json.response.type) {
                 case "redirect":
@@ -494,8 +552,16 @@ function available(event) {
             }
         }
         alert(json.message);
-    })
-    .catch(error => console.error(error));
+    }).catch(error => {
+        if (error.name === 'AbortError') {
+            console.warn("Aborted!!");
+            fetchCanceller = new AbortController()
+        } else {
+            console.error(error)
+        }
+    }).then(() => {
+        isFetching = false;
+    });
 }
 
 function cancelConfirm(event) {

@@ -117,17 +117,48 @@ class Receive extends Response
             }
         }
 
-        $clients = $this->db->select(
-            'company,fullname,zipcode,address1,address2,division',
-            'receipt_to',
-            "WHERE REPLACE(REPLACE(company,'$ideographic_space',' '),' ','') LIKE ? COLLATE $collate",
-            ["%$keyword%"]
-        );
+        //$clients = $this->db->select(
+        //    'company,fullname,zipcode,address1,address2,division',
+        //    'receipt_to',
+        //    "WHERE REPLACE(REPLACE(company,'$ideographic_space',' '),' ','') LIKE ? COLLATE $collate",
+        //    ["%$keyword%"]
+        //);
 
-        if ($clients === false) {
+        $this->db->query("SELECT @@SESSION.sql_mode AS `mode`");
+        $sql_session = $this->db->fetch();
+        $sql_mode = str_replace('ONLY_FULL_GROUP_BY', '', $sql_session['mode']);
+        $this->db->query("SET SESSION sql_mode = ?", [$sql_mode]);
+
+
+        $templatekey = $this->session->param("receipt_id");
+        $sql = "SELECT t.company,t.fullname,t.zipcode,t.address1,t.address2,t.division,
+                       r.bank_id,r.term,r.valid,r.delivery,r.payment
+                  FROM (SELECT id,company,fullname,zipcode,address1,address2,division
+                          FROM table::receipt_to
+                         WHERE userkey = ?
+                           AND REPLACE(REPLACE(company,'{$ideographic_space}',' '),' ','') LIKE ? COLLATE {$collate}
+                       ) t
+                  LEFT JOIN (SELECT client_id,bank_id,term,valid,delivery,payment
+                               FROM table::receipt
+                              WHERE userkey = ? AND templatekey = ? AND draft = ?
+                              ORDER BY issue_date DESC, receipt_number DESC
+                            ) r
+                    ON t.id = r.client_id
+                 GROUP BY t.id";
+
+        $where = [
+            $this->uid,
+            "%{$keyword}%",
+            $this->uid,
+            $templatekey,
+            '0',
+        ];
+
+        if (false === $this->db->query($sql, $where)) {
             $json_array['status'] = 1;
             $json_array['message'] = 'Database Error: '.$this->db->error();
         } else {
+            $clients = $this->db->fetchAll();
             // TODO: Use to Template Engine
             $this->view->bind('clients', $clients);
             $json_array['source'] = $this->view->render('srm/receipt/suggest_client.tpl', true);
