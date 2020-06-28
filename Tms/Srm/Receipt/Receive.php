@@ -10,6 +10,9 @@
 
 namespace Tms\Srm\Receipt;
 
+use P5\Http;
+use P5\Lang;
+
 /**
  * User management request receive class.
  *
@@ -55,6 +58,7 @@ class Receive extends Response
 
         elseif ($this->request->param('s1_addpage')) {
             $response = [[$this, 'edit'], ['addpage']];
+            $message_key = null;
         }
 
         elseif (!empty($this->request->param('move_page'))) {
@@ -64,10 +68,10 @@ class Receive extends Response
                 $this->request->param('move_page')
             );
             $url = $this->app->systemURI()."?mode=$redirect_mode";
-            \P5\Http::redirect($url);
+            Http::redirect($url);
         }
 
-        $this->postReceived(\P5\Lang::translate($message_key), $status, $response, $options);
+        $this->postReceived(Lang::translate($message_key), $status, $response, $options);
     }
 
     /**
@@ -95,7 +99,7 @@ class Receive extends Response
             $status = 1;
         }
 
-        $this->postReceived(\P5\Lang::translate($message_key), $status, $response, $options);
+        $this->postReceived(Lang::translate($message_key), $status, $response, $options);
     }
 
     public function suggestClient()
@@ -169,7 +173,7 @@ class Receive extends Response
             $status = 1;
         }
 
-        $this->postReceived(\P5\Lang::translate($message_key), $status, $response, $options);
+        $this->postReceived(Lang::translate($message_key), $status, $response, $options);
     }
 
     public function available()

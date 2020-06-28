@@ -439,6 +439,12 @@ function confirmDeletion(event) {
             event.preventDefault();
         }
     }
+
+    const form = element.form;
+    const elements = form.querySelectorAll("*[required]");
+    elements.forEach(element => {
+        element.removeAttribute('required');
+    });
 }
 
 function available(event) {
