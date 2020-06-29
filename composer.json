@@ -1,6 +1,6 @@
 {
     "name": "g-snowhawk/tms-srm",
-    "version": "dev-feature",
+    "version": "dev-master",
     "type": "library",
     "description": "This package is sales receipt management system.",
     "license": "MIT",
