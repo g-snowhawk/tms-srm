@@ -98,6 +98,19 @@ function initializeReceiptEditor(event) {
             element.classList.remove('default');
         }
     }
+    const bankId = document.getElementsByName('bank_id');
+    for (let i = 0; i < bankId.length; i++) {
+        const element = bankId[i];
+        element.addEventListener('change', selectedPulldown);
+        element.dataset.currentIndex = element.selectedIndex;
+
+        const selectedOption = element.options[element.selectedIndex];
+        if (selectedOption.value === '') {
+            element.classList.add('default');
+        } else {
+            element.classList.remove('default');
+        }
+    }
 
     if (document.documentElement.classList.contains("unavailable-receipt")) {
         const receipt = document.querySelector('.receipt-form');

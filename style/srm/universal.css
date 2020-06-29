@@ -76,7 +76,7 @@ div.receipt-form #receipt-number {
 div.receipt-form #receipt-number + br {
   display: none;
 }
-div.receipt-form select.with-other.default {
+div.receipt-form select.default {
   color: #abc;
 }
 
