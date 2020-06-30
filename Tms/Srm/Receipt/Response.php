@@ -218,6 +218,8 @@ class Response extends \Tms\Srm\Receipt
                         (string)$pdf_mapper->detail->attributes()->carryforward
                     );
                 }
+
+                $current_receipt_type = (string)$pdf_mapper->attributes()->typeof;
             }
         }
         if (empty($receipt_name)) {
@@ -290,6 +292,20 @@ class Response extends \Tms\Srm\Receipt
                 $statement,
                 $replace
             );
+
+            if ($draft === '0'
+                && !empty($current_receipt_type)
+                && strtolower($this->app->cnf("srm:link_{$current_receipt_type}_to_transfer")) === "yes"
+            ) {
+                $link_count = $this->db->count(
+                    'tms_transfer',
+                    'issue_date = ? AND note = ?',
+                    [$post['receipt'], "{$current_receipt_type}:{$post['receipt_number']}"]
+                );
+                if ($link_count > 0) {
+                    $this->view->bind('linked', 'yes');
+                }
+            }
         }
 
         // Set the TaxRate by issue_date

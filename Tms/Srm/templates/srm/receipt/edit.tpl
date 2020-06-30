@@ -22,17 +22,18 @@
           <input type="date" name="issue_date" placeholder="発行日" value="{{ post.issue_date|date('Y-m-d') }}" required class="ta-r">
           {% for field in extendedFields %}
             {% if loop.first %}
-            <span class="meta-data">
+            <span class="extended-fields meta-data{% if linked == 'yes' %} linked{% endif %}">
             {% endif %}
+            {% if 'before-linked' not in field.class or linked != 'yes' %}
               {% if field.type == 'text' %}
               <input type="text" name="{{ field.name }}" value="{{ post[field.name] }}" placeholder="{{ field.label }}"{%- for key in field|keys %}{% if key not in ['type','name','label'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}><br>
               {% elseif field.type == 'checkbox' %}
-              <label><input type="checkbox" name="{{ field.name }}" value="{{ field.value }}"{% if post[field.name] == field.value %} checked{% endif %}{%- for key in field|keys %}{% if key not in ['type','name','label','value'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}>{{ field.label }}</label><br>
+              <label{% if 'nowrap' in field.class %} class="nowrap"{% endif %}><input type="checkbox" name="{{ field.name }}" value="{{ field.value }}"{% if post[field.name] == field.value %} checked{% endif %}{%- for key in field|keys %}{% if key not in ['type','name','label','value'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}>{{ field.label }}</label><br>
               {% elseif field.type == 'textarea' %}
               <textarea name="{{ field.name }}" placeholder="{{ field.label }}">{{ field.defaultValue }}</textarea><br>
               {% elseif field.type == 'select' %}
                 {% set options = apps.callFromTemplate(field.source, field.name) %}
-                <select name="{{ field.name }}"{% if field.class is defined %} class="{{ field.class }}{% endif %}">
+                <select name="{{ field.name }}"{% if field.class is defined %} class="{{ field.class }}"{% endif %}>
                   <option value="">{{ field.label }}</option>
                   {% for option in options %}
                   <option value="{{ option.value }}"{% if post[field.name] == option.value %} selected{% endif %}>{{ option.label }}</option>
@@ -44,6 +45,7 @@
               {% elseif field.type == 'script' %}
               <script src="{{ field.src }}"{% if field.async is not empty %} async{% endif %}></script>
               {% endif %}
+            {% endif %}
             {% if loop.last %}
             </span>
             {% endif %}

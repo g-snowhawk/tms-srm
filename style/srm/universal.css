@@ -68,6 +68,9 @@ div.receipt-form div.flex-box > * .meta-data label {
   max-width: 180px;
   padding: 6px 0;
 }
+div.receipt-form div.flex-box > * .meta-data .nowrap + br {
+  display: none;
+}
 div.receipt-form #receipt-number {
   display: block;
   font-size: .7rem;

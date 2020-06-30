@@ -22,8 +22,21 @@ switch (document.readyState) {
 }
 
 function initializeReceiptUpdater(event) {
-    if (inputReceipt && inputReceipt.form.draft.value !== '1') {
-        inputReceipt.addEventListener('keyup', update);
+    const elements = document.querySelectorAll('[data-func-init]');
+    elements.forEach(element => {
+        this[element.dataset.funcInit].apply(this, [element]);
+    });
+}
+
+function initReceipt(element) {
+    const parent = element.findParent('.extended-fields');
+    if (parent && parent.classList.contains('linked')) {
+        element.disabled = true;
+        return;
+    }
+
+    if (element.form.draft.value !== '1') {
+        element.addEventListener('keyup', update);
     }
 }
 
