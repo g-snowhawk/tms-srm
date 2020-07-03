@@ -63,6 +63,11 @@ function update(event) {
             hidden.name = 's1_submit';
             hidden.value = 'via JS';
 
+            const hidden = form.appendChild(document.createElement('input'));
+            hidden.type = 'hidden';
+            hidden.name = 'faircopy';
+            hidden.value = '0';
+
             form.submit();
         }
     }

@@ -51,17 +51,21 @@ class Receipt extends \Tms\Srm
 
         $this->db->begin();
 
-        $is_draft = (empty($post['s1_submit'])) ? '1' : '0'; 
+        if (!empty($post['s1_submit'])) {
+            $post['draft'] = '0';
+        }
+
         if (empty($post['receipt_number'])) {
-            $post['receipt_number'] = $this->newReceiptNumber($post['issue_date'], $is_draft);
-        } elseif ($is_draft === '0' && $post['draft'] !== '0') {
-            $post['new_receipt_number'] = $this->newReceiptNumber($post['issue_date'], $is_draft);
+            $post['receipt_number'] = $this->newReceiptNumber($post['issue_date'], $post['draft']);
+        } elseif (!empty($post['s1_submit'])) {
+            //$old_receipt_number = $post['receipt_number'];
+            $post['new_receipt_number'] = $this->newReceiptNumber($post['issue_date'], $post['draft']);
         }
 
         if (0 !== ($client_id = $this->saveClientData($post))
-            && false !== $this->saveReceipt($client_id, $post, $is_draft)
-            && false !== $this->saveReceiptDetails($post, $is_draft)
-            && false !== $this->saveReceiptNote($post, $is_draft)
+            && false !== $this->saveReceipt($client_id, $post)
+            && false !== $this->saveReceiptDetails($post)
+            && false !== $this->saveReceiptNote($post)
         ) {
             if (isset($post['new_receipt_number'])) {
                 $post['receipt_number'] = $post['new_receipt_number'];
@@ -80,18 +84,12 @@ class Receipt extends \Tms\Srm
             // Output the receipt as a PDF
             $after_follow = true;
             if (!empty($post['s1_submit']) && $post['draft'] === '1') {
-                if (false === $this->outputPdf($client_id, implode('-',$key_array))
-                    || false === $this->removeDraftFlag($key_array)
+                if (false === $this->outputPdf($client_id, implode('-',array_merge($key_array,['0'])))
+                    || false === $this->removeDraftFlag($key_array /*, $old_receipt_number */)
                 ) {
                     $after_follow = false;
-                }
-
-                if (false !== $after_follow && strtolower($this->app->cnf("srm:link_{$this->current_receipt_type}_to_transfer")) === "yes") {
-                    if (false === $this->linkToTransfer($post)) {
-                        $after_follow = false;
-                        // If failed link to transfer unlink PDF
-                        // ...
-                    }
+                } else {
+                    $post['draft'] = '0';
                 }
             } elseif (!empty($post['receipt'])) {
                 $pdf_mapper_source = $this->db->get('pdf_mapper', 'receipt_template', 'id = ? AND userkey = ?', [$this->session->param('receipt_id'), $this->uid]);
@@ -100,12 +98,12 @@ class Receipt extends \Tms\Srm
                     $this->current_receipt_type = (string)$pdf_mapper->attributes()->typeof;
                 }
 
-                if (strtolower($this->app->cnf("srm:link_{$this->current_receipt_type}_to_transfer")) === "yes") {
-                    $this->total_price = $this->calcurateTotals(implode('-',$key_array));
-                    if (false === $this->linkToTransfer($post)) {
-                        $after_follow = false;
-                    }
-                }
+                $key_array[] = '0';
+                $this->total_price = $this->calcurateTotals(implode('-',$key_array));
+            }
+
+            if (false === $this->app->execPlugin('afterSaveReceipt', $post, $this->current_receipt_type, $this->total_price)) {
+                $after_follow = false;
             }
 
             if (false !== $after_follow) {
@@ -174,7 +172,7 @@ class Receipt extends \Tms\Srm
         return 0;
     }
 
-    private function saveReceiptDetails($post, $is_draft) : bool
+    private function saveReceiptDetails($post) : bool
     {
         $receipt_id = $this->session->param('receipt_id');
         $lines = $this->db->get('line', 'receipt_template', 'id = ? AND userkey = ?', [$receipt_id, $this->uid]);
@@ -192,11 +190,8 @@ class Receipt extends \Tms\Srm
             'userkey' => $this->uid,
             'templatekey' => $receipt_id,
             'page_number' => $page_number,
+            'draft' => $post['draft'],
         ];
-
-        if (isset($post['s1_submit']) && $post['s1_submit'] === 'via JS') {
-            $save['draft'] = $is_draft;
-        }
 
         for ($line_number = 1; $line_number <= $lines; $line_number++) {
             if (empty($post['content'][$line_number]) && empty($post['price'][$line_number])) {
@@ -238,7 +233,7 @@ class Receipt extends \Tms\Srm
                 $save['receipt_number'],
                 $this->uid,
                 $save['templatekey'],
-                $is_draft,
+                $save['draft'],
                 $save['page_number'],
                 $save['line_number'],
             ];
@@ -247,9 +242,6 @@ class Receipt extends \Tms\Srm
                     return false;
                 }
             } else {
-                if ($is_draft === '0') {
-                    $save['draft'] = '0';
-                }
                 if (false === $this->db->insert($table_name, $save)) {
                     return false;
                 }
@@ -259,7 +251,7 @@ class Receipt extends \Tms\Srm
         return true;
     }
 
-    private function saveReceiptNote($post, $is_draft) : bool
+    private function saveReceiptNote($post) : bool
     {
         $receipt_id = $this->session->param('receipt_id');
 
@@ -275,6 +267,7 @@ class Receipt extends \Tms\Srm
             'receipt_number' => $post[$receipt_number_key],
             'userkey' => $this->uid,
             'templatekey' => $receipt_id,
+            'draft' => $post['draft'],
             'page_number' => $page_number,
             'content' => $post['note'],
         ];
@@ -285,7 +278,7 @@ class Receipt extends \Tms\Srm
             $save['receipt_number'],
             $this->uid,
             $save['templatekey'],
-            $is_draft,
+            $save['draft'],
             $save['page_number'],
         ];
         if ($this->db->exists($table_name, $statement, $replace)) {
@@ -297,10 +290,7 @@ class Receipt extends \Tms\Srm
                 return false;
             }
         } else {
-            if ($is_draft === '0') {
-                $save['draft'] = '0';
-            }
-            if (false === $this->db->insert($table_name, $save)) {
+            if (!empty($post['note']) && false === $this->db->insert($table_name, $save)) {
                 return false;
             }
         }
@@ -308,19 +298,20 @@ class Receipt extends \Tms\Srm
         return true;
     }
 
-    private function saveReceipt($client_id, $post, $is_draft) : bool
+    private function saveReceipt($client_id, $post) : bool
     {
         $table_name = 'receipt';
         $receipt_id = $this->session->param('receipt_id');
+        $receipt_number = $post['new_receipt_number'] ?? $post['receipt_number'];
 
-        $table_columns = $this->db->getFields($this->db->TABLE($table_name), true);
         $save = [
-            'receipt_number' => $post['receipt_number'],
+            'receipt_number' => $receipt_number,
             'userkey' => $this->uid,
             'templatekey' => $receipt_id,
             'client_id' => $client_id,
         ];
 
+        $table_columns = $this->db->getFields($this->db->TABLE($table_name), true);
         $system_managed_columns = array_keys($save);
         foreach ($table_columns as $column => $property) {
             if (in_array($column, $system_managed_columns)) {
@@ -334,17 +325,10 @@ class Receipt extends \Tms\Srm
             }
         }
 
+        $draft = $post['faircopy'] ?? '1';
+
         $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND draft = ?';
-        $replace = [$post['issue_date'],$save['receipt_number'],$this->uid,$save['templatekey'],'1'];
-
-        if (isset($post['new_receipt_number'])) {
-            $save['receipt_number'] = $post['new_receipt_number'];
-        }
-
-        if ($is_draft === '0') {
-            $save['draft'] = $is_draft;
-            $replace[4] = $is_draft;
-        }
+        $replace = [$post['issue_date'],$post['receipt_number'],$this->uid,$save['templatekey'],$draft];
 
         if ($this->db->exists($table_name, $statement, $replace)) {
             if (false === $this->db->update($table_name, $save, $statement, $replace)) {
@@ -357,7 +341,7 @@ class Receipt extends \Tms\Srm
         return true;
     }
 
-    private function newReceiptNumber($issue_date, $is_draft, $destination = null) : ?int
+    private function newReceiptNumber($issue_date, $draft, $destination = null) : ?int
     {
         $receipt_id = (!empty($destination)) ? $destination : $this->session->param('receipt_id');
         if (empty($receipt_id)) {
@@ -367,7 +351,7 @@ class Receipt extends \Tms\Srm
         $timestamp = strtotime($issue_date);
 
         $statement = 'userkey = ? AND templatekey = ? AND draft = ?';
-        $options = [$this->uid, $receipt_id, $is_draft];
+        $options = [$this->uid, $receipt_id, $draft];
 
         if ($this->app->cnf('srm:allow_renumbering') === '1') {
             $statement .= ' AND issue_date <= ?';
@@ -415,7 +399,7 @@ class Receipt extends \Tms\Srm
 
     protected function outputPdf($client_id, $receiptkey) : bool
     {
-        list($year, $month, $day, $receipt_number, $userkey, $templatekey) = explode('-', $receiptkey);
+        list($year, $month, $day, $receipt_number, $userkey, $templatekey, $draft) = explode('-', $receiptkey);
         $issue_date = implode('-', [$year, $month, $day]);
         $pdf_mapper_source = $this->db->get('pdf_mapper', 'receipt_template', 'id = ? AND userkey = ?', [$templatekey, $this->uid]);
         if (empty($pdf_mapper_source)) {
@@ -431,7 +415,7 @@ class Receipt extends \Tms\Srm
         $carry_forward = (isset($pdf_mapper->detail->attributes()->carryforward))
             ? (string)$pdf_mapper->detail->attributes()->carryforward : null;
 
-        $header = $this->db->get('*', 'receipt', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey) = ?", [$receiptkey]);
+        $header = $this->db->get('*', 'receipt', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$receiptkey]);
         $detail = $this->receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, $carry_forward, $header);
         $client = $this->db->get('*', 'receipt_to', "id = ? AND userkey = ?", [$client_id, $this->uid]);
         $signature = $this->signatureForPdf($this->userinfo);
@@ -732,7 +716,14 @@ class Receipt extends \Tms\Srm
 
     private function receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, $carry_forward, &$header)
     {
-        $detail = $this->db->select('*', 'receipt_detail', "WHERE CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey) = ? ORDER BY `page_number`,`line_number`", [$receiptkey]);
+        $statement = "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?";
+        $detail = $this->db->select('*', 'receipt_detail', "WHERE CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ? ORDER BY `page_number`,`line_number`", [$receiptkey]);
+        $header = $this->db->get(
+            'additional_1_price,additional_2_price',
+            'receipt',
+            $statement,
+            [$receiptkey]
+        );
 
         $return_value = [];
 
@@ -814,129 +805,6 @@ class Receipt extends \Tms\Srm
         return $list;
     }
 
-    private function linkToTransfer($post)
-    {
-        switch ($this->current_receipt_type) {
-            case 'bill':
-
-                if (!isset($post['relation']) || $post['relation'] !== 'yes') {
-                    return;
-                }
-
-                $note = 'bill:' . $post['receipt_number'];
-                $category = 'T';
-                $sales_amount_code = $this->db->get('item_code', 'account_items', 'userkey = ? AND system_operator = ?', [$this->uid, 'SALES']);
-                $accounts_receivable_code = $this->db->get('item_code', 'account_items', 'userkey = ? AND system_operator = ?', [$this->uid, 'ACCOUNTS_RECEIVABLE']);
-
-                if (empty($post['receipt'])) {
-                    $item_code_left  = ['1' => $accounts_receivable_code, '2' => null];
-                    $item_code_right = ['1' => $sales_amount_code, '2' => null];
-                    $datekey = 'issue_date';
-                } else {
-                    $payment_code = $this->db->get('item_code', 'bank', 'userkey = ? AND account_number = ?', [$this->uid, $post['bank_id']]);
-                    if (!empty($post['cash']) || empty($payment_code)) {
-                        $category = 'R';
-                        $payment_code = $this->db->get('item_code', 'account_items', 'userkey = ? AND system_operator = ?', [$this->uid, 'CASH']);
-                    }
-                    $item_code_left  = ['1' => $payment_code, '2' => null];
-                    $item_code_right = ['1' => $accounts_receivable_code, '2' => null];
-                    $this->request->param('issue_date', $post['receipt']);
-                    $datekey = 'receipt';
-                }
-
-                $page_number = $this->db->get('page_number', \Tms\Oas\Transfer::TRANSFER_TABLE, 
-                    'userkey = ? AND issue_date = ? AND category = ? AND note = ?',
-                    [$this->uid, $post[$datekey], $category, $note]
-                );
-                if (!empty($page_number)) {
-                    $this->request->param('page_number', $page_number);
-                }
-
-                $this->request->param('category', $category);
-                $this->request->param('amount_left', ['1' => $this->total_price, '2' => null]);
-                $this->request->param('item_code_left', $item_code_left);
-                $this->request->param('summary', ['1' => $post['subject'], '2' => $post['company']]);
-                $this->request->param('item_code_right', $item_code_right);
-                $this->request->param('amount_right', ['1' => $this->total_price, '2' => null]);
-                $this->request->param('note', ['1' => $note, '2' => $note]);
-
-                $transfer = new \Tms\Oas\Transfer\Relational($this, $this->app);
-                $result = $transfer->save();
-
-                if (!empty($page_number)) {
-                    $this->request->param('page_number', null);
-                }
-                $this->request->param('category', null);
-                $this->request->param('amount_left', null);
-                $this->request->param('item_code_left', null);
-                $this->request->param('summary', null);
-                $this->request->param('item_code_right', null);
-                $this->request->param('amount_right', null);
-                $this->request->param('note', null);
-                $this->request->param('issue_date', $post['issue_date']);
-
-                return $result;
-
-            case 'receipt':
-
-                if (!isset($post['relation']) || $post['relation'] !== 'yes') {
-                    return;
-                }
-
-                $note = 'receipt:' . $post['receipt_number'];
-
-                $category = 'R';
-                $sales_amount_code = $this->db->get('item_code', 'account_items', 'userkey = ? AND system_operator = ?', [$this->uid, 'SALES']);
-                $payment_code = $this->db->get('item_code', 'account_items', 'userkey = ? AND system_operator = ?', [$this->uid, 'CASH']);
-
-                if (!empty($post['bank_id'])) {
-                    $category = 'T';
-                    $payment_code = $this->db->get('item_code', 'bank', 'userkey = ? AND account_number = ?', [$this->uid, $post['bank_id']]);
-                }
-
-                if (empty($post['receipt'])) {
-                    $post['receipt'] = $post['issue_date'];
-                }
-                $item_code_left  = ['1' => $payment_code, '2' => null];
-                $item_code_right = ['1' => $sales_amount_code, '2' => null];
-                $this->request->param('issue_date', $post['receipt']);
-                $datekey = 'receipt';
-
-                $page_number = $this->db->get('page_number', \Tms\Oas\Transfer::TRANSFER_TABLE, 
-                    'userkey = ? AND issue_date = ? AND category = ? AND note = ?',
-                    [$this->uid, $post[$datekey], $category, $note]
-                );
-                if (!empty($page_number)) {
-                    $this->request->param('page_number', $page_number);
-                }
-
-                $this->request->param('category', $category);
-                $this->request->param('amount_left', ['1' => $this->total_price, '2' => null]);
-                $this->request->param('item_code_left', $item_code_left);
-                $this->request->param('summary', ['1' => $post['subject'], '2' => $post['company']]);
-                $this->request->param('item_code_right', $item_code_right);
-                $this->request->param('amount_right', ['1' => $this->total_price, '2' => null]);
-                $this->request->param('note', ['1' => $note, '2' => $note]);
-
-                $transfer = new \Tms\Oas\Transfer\Relational($this, $this->app);
-                $result = $transfer->save();
-
-                if (!empty($page_number)) {
-                    $this->request->param('page_number', null);
-                }
-                $this->request->param('category', null);
-                $this->request->param('amount_left', null);
-                $this->request->param('item_code_left', null);
-                $this->request->param('summary', null);
-                $this->request->param('item_code_right', null);
-                $this->request->param('amount_right', null);
-                $this->request->param('note', null);
-                $this->request->param('issue_date', $post['issue_date']);
-
-                return $result;
-        }
-    }
-
     public function honorificTitle(&$data, &$pdf_mapper)
     {
         $company = preg_replace('/\s+/', '', mb_convert_kana($data['company'], 's'));
@@ -962,7 +830,19 @@ class Receipt extends \Tms\Srm
 
     protected function calcurateTotals($receiptkey)
     {
-        $detail = $this->db->select('*', 'receipt_detail', "WHERE CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey) = ? ORDER BY `page_number`,`line_number`", [$receiptkey]);
+        $statement = "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?";
+        $header = $this->db->get(
+            'additional_1_price,additional_2_price',
+            'receipt',
+            $statement,
+            [$receiptkey]
+        );
+        $detail = $this->db->select(
+            '*',
+            'receipt_detail',
+            "WHERE {$statement} ORDER BY `page_number`,`line_number`",
+            [$receiptkey]
+        );
 
         // Culcuration totals
         $subtotal = 0;
@@ -976,12 +856,16 @@ class Receipt extends \Tms\Srm
         return $subtotal + $tax + (int)$header['additional_1_price'] + (int)$header['additional_2_price'];
     }
 
-    private function removeDraftFlag($options)
+    private function removeDraftFlag($options /* , $receipt_number */)
     {
         $data = ['draft' => '0'];
-        $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ?';
+        $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND draft = ?';
+        $options[] = '1';
+        if (!is_null($receipt_number)) {
+            $options[1] = $receipt_number;
+        }
 
-        return false !== $this->db->update('receipt', $data, $statement, $options);
+        return false !== $this->db->delete('receipt', $statement, $options);
     }
 
     protected function receiptDetail($templatekey, $issue_date, $receipt_number, $page_number, $draft, $with_lines)

@@ -14,7 +14,9 @@
           {% if typeOf == 'bill' or typeOf == 'receipt' %}
             <p class="bill-info">
             支払期限：<i>{{ unit.due_date|date('Y年m月d日') }}</i><br>
-            {% if unit.collected == 1 %}
+            {% if unit.draft == '1' %}
+              ？入金日：<span>---</span>
+            {% elseif unit.collected == 1 %}
               ●入金日：<strong>未入金</strong>
             {% elseif unit.collected == 2 %}
               ○入金日：<b>入金待ち</b>
