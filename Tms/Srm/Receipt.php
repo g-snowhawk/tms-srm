@@ -83,13 +83,11 @@ class Receipt extends \Tms\Srm
 
             // Output the receipt as a PDF
             $after_follow = true;
-            if (!empty($post['s1_submit']) && $post['draft'] === '1') {
+            if (!empty($post['s1_submit']) && $post['draft'] === '0') {
                 if (false === $this->outputPdf($client_id, implode('-',array_merge($key_array,['0'])))
                     || false === $this->removeDraftFlag($key_array /*, $old_receipt_number */)
                 ) {
                     $after_follow = false;
-                } else {
-                    $post['draft'] = '0';
                 }
             } elseif (!empty($post['receipt'])) {
                 $pdf_mapper_source = $this->db->get('pdf_mapper', 'receipt_template', 'id = ? AND userkey = ?', [$this->session->param('receipt_id'), $this->uid]);
