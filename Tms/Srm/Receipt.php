@@ -716,12 +716,6 @@ class Receipt extends \Tms\Srm
     {
         $statement = "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?";
         $detail = $this->db->select('*', 'receipt_detail', "WHERE CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ? ORDER BY `page_number`,`line_number`", [$receiptkey]);
-        $header = $this->db->get(
-            'additional_1_price,additional_2_price',
-            'receipt',
-            $statement,
-            [$receiptkey]
-        );
 
         $return_value = [];
 
