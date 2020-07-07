@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS `TMS_receipt` (
   `sales` varchar(1) DEFAULT NULL,
   `delivery` varchar(255) DEFAULT NULL,
   `payment` varchar(255) DEFAULT NULL,
+  `payment_terms` varchar(255) DEFAULT NULL,
   `additional_1_item` varchar(50) DEFAULT NULL,
   `additional_1_price` int(11) DEFAULT NULL,
   `additional_2_item` varchar(50) DEFAULT NULL,

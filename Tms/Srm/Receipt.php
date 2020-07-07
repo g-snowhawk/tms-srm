@@ -179,12 +179,11 @@ class Receipt extends \Tms\Srm
         if (empty($page_number)) $page_number = 1;
 
         $table_name = 'receipt_detail';
-        $receipt_number_key = (isset($post['new_receipt_number']))
-            ? 'new_receipt_number' : 'receipt_number';
+        $receipt_number = $post['new_receipt_number'] ?? $post['receipt_number'];
 
         $save = [
             'issue_date' => $post['issue_date'],
-            'receipt_number' => $post[$receipt_number_key],
+            'receipt_number' => $receipt_number,
             'userkey' => $this->uid,
             'templatekey' => $receipt_id,
             'page_number' => $page_number,
@@ -196,7 +195,7 @@ class Receipt extends \Tms\Srm
                 if (false === $this->db->delete(
                     $table_name,
                     'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND page_number = ? AND line_number = ? AND draft = ?',
-                    [$save['issue_date'], $save['receipt_number'], $save['userkey'], $save['templatekey'], $save['page_number'], $line_number, '1']
+                    [$save['issue_date'], $save['receipt_number'], $save['userkey'], $save['templatekey'], $save['page_number'], $line_number, $save['draft']]
                 )) {
                     return false;
                 }
@@ -257,12 +256,11 @@ class Receipt extends \Tms\Srm
         if (empty($page_number)) $page_number = 1;
 
         $table_name = 'receipt_note';
-        $receipt_number_key = (isset($post['new_receipt_number']))
-            ? 'new_receipt_number' : 'receipt_number';
+        $receipt_number = $post['new_receipt_number'] ?? $post['receipt_number'];
 
         $save = [
             'issue_date' => $post['issue_date'],
-            'receipt_number' => $post[$receipt_number_key],
+            'receipt_number' => $receipt_number,
             'userkey' => $this->uid,
             'templatekey' => $receipt_id,
             'draft' => $post['draft'],
@@ -938,6 +936,24 @@ class Receipt extends \Tms\Srm
     {
         $this->db->begin();
 
+        $to = [];
+        $pdf_mapper_source = $this->db->get('pdf_mapper', 'receipt_template', 'id = ? AND userkey = ?', [$destination, $this->uid]);
+        if (!empty($pdf_mapper_source)) {
+            $pdf_mapper = simplexml_load_string($pdf_mapper_source);
+            foreach ($pdf_mapper->extendedfield->item as $obj) {
+                $to[] = (string)$obj->attributes()->name;
+            }
+        }
+        $from = [];
+        $pdf_mapper_source = $this->db->get('pdf_mapper', 'receipt_template', 'id = ? AND userkey = ?', [$templatekey, $this->uid]);
+        if (!empty($pdf_mapper_source)) {
+            $pdf_mapper = simplexml_load_string($pdf_mapper_source);
+            foreach ($pdf_mapper->extendedfield->item as $obj) {
+                $from[] = (string)$obj->attributes()->name;
+            }
+        }
+        $diff = array_diff($from, $to);
+
         $clone_issue_date = date('Y-m-d');
         $clone_receipt_number = $this->newReceiptNumber($issue_date, '1', $destination);
         foreach (['receipt', 'receipt_detail'] as $table_name) {
@@ -952,6 +968,8 @@ class Receipt extends \Tms\Srm
                     $columns[] = "'1' AS $field";
                 } elseif ($field === 'templatekey' && !empty($destination) && $templatekey !== $destination) {
                     $columns[] = $this->db->quote($destination) . " AS $field";
+                } elseif (in_array($field, $diff)) {
+                    $columns[] = "NULL AS $field";
                 } else {
                     $columns[] = "$field";
                 }
