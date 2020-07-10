@@ -54,11 +54,11 @@ class Receipt extends \Tms\Srm
         if (!empty($post['s1_submit'])) {
             $post['draft'] = '0';
         }
+        $faircopy = $post['faircopy'] ?? null;
 
         if (empty($post['receipt_number'])) {
             $post['receipt_number'] = $this->newReceiptNumber($post['issue_date'], $post['draft']);
-        } elseif (!empty($post['s1_submit'])) {
-            //$old_receipt_number = $post['receipt_number'];
+        } elseif (!empty($post['s1_submit']) && $faircopy === '0') {
             $post['new_receipt_number'] = $this->newReceiptNumber($post['issue_date'], $post['draft']);
         }
 

@@ -58,15 +58,13 @@ function update(event) {
                 element.disabled = false;
             }
 
-            const hidden = form.appendChild(document.createElement('input'));
-            hidden.type = 'hidden';
-            hidden.name = 's1_submit';
-            hidden.value = 'via JS';
-
-            const hidden = form.appendChild(document.createElement('input'));
-            hidden.type = 'hidden';
-            hidden.name = 'faircopy';
-            hidden.value = '0';
+            const hiddens = { 's1_submit': 'via JS', 'faircopy': '0' };
+            for (let name in hiddens) {
+                let hidden = form.appendChild(document.createElement('input'));
+                hidden.type = 'hidden';
+                hidden.name = name;
+                hidden.value = hiddens[name];
+            }
 
             form.submit();
         }
