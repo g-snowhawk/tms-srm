@@ -422,7 +422,7 @@ class Receipt extends \Tms\Srm
             $bank['label'] = $pdf_mapper->bank->firstpage->account_holder->attributes()->label;
         }
 
-        $header['note'] = $this->db->get('content', 'receipt_note', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", ["{$receiptkey}-0"]);
+        $header['note'] = $this->db->get('content', 'receipt_note', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$receiptkey]);
         if (!empty($header['note'])) {
             $header['note'] = nl2br(preg_replace("/(\r\n|\r)/", "\n", $header['note']));
         }
