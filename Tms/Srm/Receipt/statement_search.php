@@ -1,13 +1,30 @@
 <?php
+$notes = <<<SQL
+SELECT rc.*,nt.note
+  FROM table::receipt rc
+  LEFT JOIN (SELECT MIN(issue_date) AS issue_date,
+               MIN(receipt_number) AS receipt_number,
+               MIN(userkey) AS userkey,
+               MIN(templatekey) AS templatekey,
+               GROUP_CONCAT(content) AS note 
+          FROM table::receipt_note
+         GROUP BY issue_date,receipt_number,userkey,templatekey
+       ) nt
+    ON rc.issue_date = nt.issue_date
+   AND rc.receipt_number = nt.receipt_number
+   AND rc.userkey = nt.userkey
+   AND rc.templatekey = nt.templatekey
+SQL;
+
 $receipt = <<<SQL
 SELECT r.*,rt.content
-  FROM tms_receipt r
+  FROM ({$notes}) r
   JOIN (SELECT MIN(issue_date) AS issue_date,
                MIN(receipt_number) AS receipt_number,
                MIN(userkey) AS userkey,
                MIN(templatekey) AS templatekey,
                GROUP_CONCAT(content) AS content
-          FROM tms_receipt_detail
+          FROM table::receipt_detail
          GROUP BY issue_date,receipt_number,userkey,templatekey
        ) rt
     ON r.issue_date = rt.issue_date
