@@ -24,7 +24,9 @@ switch (document.readyState) {
 function initializeReceiptUpdater(event) {
     const elements = document.querySelectorAll('[data-func-init]');
     elements.forEach(element => {
-        this[element.dataset.funcInit].apply(this, [element]);
+        if (window[element.dataset.funcInit]) {
+            window[element.dataset.funcInit].apply(window, [element]);
+        }
     });
 }
 
