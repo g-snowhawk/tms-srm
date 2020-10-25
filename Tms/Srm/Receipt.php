@@ -846,14 +846,11 @@ class Receipt extends \Tms\Srm
         return $subtotal + $tax + (int)$header['additional_1_price'] + (int)$header['additional_2_price'];
     }
 
-    private function removeDraftFlag($options /* , $receipt_number */)
+    private function removeDraftFlag($options)
     {
         $data = ['draft' => '0'];
         $statement = 'issue_date = ? AND receipt_number = ? AND userkey = ? AND templatekey = ? AND draft = ?';
         $options[] = '1';
-        if (!is_null($receipt_number)) {
-            $options[1] = $receipt_number;
-        }
 
         return false !== $this->db->delete('receipt', $statement, $options);
     }
