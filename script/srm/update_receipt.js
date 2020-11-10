@@ -6,10 +6,7 @@
  * This software is released under the MIT License.
  * https://www.plus-5.com/licenses/mit-license
  */
-'use strict';
-
 const inputReceipt = document.querySelector('input[name=receipt]');
-const inputRelation = document.querySelector('input[name=relation]');
 
 switch (document.readyState) {
     case 'loading' :
@@ -24,7 +21,7 @@ switch (document.readyState) {
 function initializeReceiptUpdater(event) {
     const elements = document.querySelectorAll('[data-func-init]');
     elements.forEach(element => {
-        if (window[element.dataset.funcInit]) {
+        if (typeof window[element.dataset.funcInit] === 'function') {
             window[element.dataset.funcInit].apply(window, [element]);
         }
     });
@@ -38,29 +35,34 @@ function initReceipt(element) {
     }
 
     if (element.form.draft.value !== '1') {
-        element.addEventListener('keyup', update);
+        element.addEventListener('keyup', updateReceipt);
     }
 }
 
-function update(event) {
+function updateReceipt(event) {
     if (event.type === 'keyup' && event.key !== 'Enter') {
         return;
     }
-    if (inputReceipt.value.match(/^[0-9]{4}[^0-9][0-9]{1,2}[^0-9][0-9]{1,2}$/)) {
 
-        const form = inputReceipt.form;
+    const form = inputReceipt.form;
+    const relation = form.relation;
 
-        let message = '入金日を更新します。';
-        message += (form.relation.checked) ? '伝票に記帳されます' : '伝票には記帳されません';
+    if (inputReceipt.value.match(/^[0-9]{4}[\-\/][0-9]{1,2}[\-\/][0-9]{1,2}$/)) {
+
+        let message = inputReceipt.dataset.confirm;
+        message += (relation.checked) ? relation.dataset.checkedMessage : relation.dataset.uncheckedMessage;
 
         if (confirm(message)) {
-            const form = inputReceipt.form;
             for (let i = 0; i < form.elements.length; i++) {
                 const element = form.elements[i];
                 element.disabled = false;
             }
 
-            const hiddens = { 's1_submit': 'via JS', 'faircopy': '0' };
+            const hiddens = {
+                's1_submit': 'via JS',
+                'faircopy': '0',
+                'create-pdf': 'none',
+            };
             for (let name in hiddens) {
                 let hidden = form.appendChild(document.createElement('input'));
                 hidden.type = 'hidden';
@@ -69,6 +71,10 @@ function update(event) {
             }
 
             form.submit();
+        } else if (event.target === inputReceipt && !relation.checked) {
+            relation.addEventListener('click', updateReceipt);
         }
+    } else {
+        relation.removeEventListener('click', updateReceipt);
     }
 }

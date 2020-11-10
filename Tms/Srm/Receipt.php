@@ -406,6 +406,11 @@ class Receipt extends \Tms\Srm
         $pdf_mapper = simplexml_load_string($pdf_mapper_source);
 
         $this->current_receipt_type = (string)$pdf_mapper->attributes()->typeof;
+        if ($this->request->param('create-pdf') === 'none') {
+            $this->total_price = $this->calcurateTotals($receiptkey);
+            return true;
+        }
+
         $line_count = (int)$pdf_mapper->detail->attributes()->rows;
         $middlepage_line_count = (int)$pdf_mapper->detail->attributes()->mrows;
         $carry_forward = (isset($pdf_mapper->detail->attributes()->carryforward))
@@ -1024,5 +1029,27 @@ class Receipt extends \Tms\Srm
         }
 
         return $this->$kind;
+    }
+
+    protected function totalOfReceipt($issue_date, $receipt_number, $templatekey, $draft = '0'): ?int
+    {
+        $statement = 'userkey = ? AND templatekey = ? AND issue_date = ? AND receipt_number = ? AND draft = ?';
+        $replaces = [$this->uid, $templatekey, $issue_date, $receipt_number, $draft];
+        $additionals = $this->db->get('additional_1_price,additional_2_price', 'receipt', $statement, $replaces);
+        $details = $this->db->select('price,quantity,tax_rate', 'receipt_detail', "WHERE $statement", $replaces);
+
+        if (false === $details) {
+            return null;
+        }
+
+        $total = 0;
+        foreach ($details as $unit) {
+            $subtotal = $unit['price'] * $unit['quantity'];
+            $total += $subtotal + $subtotal * (float)$unit['tax_rate'];
+        }
+        $total += $additionals['additional_1_price'] ?? 0;
+        $total += $additionals['additional_2_price'] ?? 0;
+
+        return round($total);
     }
 }

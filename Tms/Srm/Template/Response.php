@@ -70,7 +70,7 @@ class Response extends \Tms\Srm\Template
             $post = $this->request->POST();
         } else {
             $post = $this->db->get(
-                'id, title, line, pdf_mapper, create_date, modify_date',
+                'id, title, line, pdf_mapper, mail_template, create_date, modify_date',
                 'receipt_template',
                 'id = ? AND userkey = ?',
                 [$this->request->param('id'), $this->uid]

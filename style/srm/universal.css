@@ -367,6 +367,7 @@ ul.button-list li a:hover {
 }
 
 
+#template-edit textarea[name=mail_template],
 #template-edit textarea[name=pdf_mapper] {
   font-family: 'Courier New', monospace;
   font-size: .8rem;
@@ -490,4 +491,104 @@ ul.button-list li a:hover {
 #srm-receipt-default .section-list section.unavailable h3 + p {
   color: #999;
   text-decoration: line-through;
+}
+
+
+a.run-mailer {
+  font-size: 0;
+  margin-left: 0.2rem;
+  text-decoration: none;
+}
+a.run-mailer:before {
+  content: "\2709";
+  font-family: "Segoe UI Emoji",
+               "Segoe UI Symbol",
+               "Apple Color Emoji",
+               "Noto Color Emoji",
+               "Noto Emoji",
+               sans-serif;
+  font-size: 1rem;
+}
+
+#mailer-container {
+  align-items: center;
+  background: rgba(0,0,0,0.5);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 3000;
+}
+#mailer-container form {
+  background: #fff;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 86%;
+  margin: 0;
+  max-width: 640px;
+  padding: 0 1em;
+  width: 100%;
+}
+#mailer-container form > * {
+  border-bottom: 1px solid #ccc;
+}
+#mailer-container form > *:last-child {
+  border-bottom: 0 none transparent;
+}
+#mailer-container form > .flex {
+  align-items: center;
+  display: flex;
+}
+#mailer-container form > .flex label {
+  color: #666;
+  font-size: 0.75rem;
+  margin: 0 0 0 0.5em;
+  white-space: nowrap;
+}
+#mailer-container form > .flex label:after {
+  content: ':';
+  margin: 0 0 0 0.2em;
+}
+#mailer-container form > .flex input {
+  border: 0 none transparent;
+  flex-grow: 1;
+  padding: 0.8em 0.5em;
+}
+#mailer-container form > .grow {
+  flex-grow: 1;
+  position: relative;
+}
+#mailer-container form > .grow textarea {
+  border: 0 none transparent;
+  bottom: 0;
+  font-family: Courier, 'Courier New', monospace;
+  left: 0;
+  position: absolute;
+  resize: none;
+  right: 0;
+  top: 0;
+}
+#mailer-container form > .controller {
+  display: flex;
+  justify-content: space-between;
+}
+#mailer-container form > .controller input {
+  background: transparent;
+  border: 0 none transparent;
+  color: #69c;
+  cursor: pointer;
+  line-height: 1;
+  margin: 1em 0.5em;
+  min-width: auto;
+  padding: 0;
+  width: auto;
+}
+#mailer-container form > .plain {
+  color: #808080;
+  font-size: 0.7rem;
+  padding: 0.5em;
 }

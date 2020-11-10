@@ -53,6 +53,11 @@
       <label class="file"><input type="file" name="base_pdf_multiple" id="base_pdf_multiple" value="{{ post.base_pdf_multiple }}" accept="application/pdf"></label>
     </div>
 
+    <div class="fieldset{% if err.vl_mail_template == 1 %} invalid{% endif %}">
+      <label for="mail_template">メール雛形</label>
+      <textarea name="mail_template" id="mail_template" wrap="off">{{ post.mail_template }}</textarea>
+    </div>
+
     <div class="metadata">
       登録日：{{ post.create_date|date('Y年n月j日 H:i') }}<input type="hidden" name="create_date" value="{{ post.create_date }}"><br>
       更新日：{{ post.modify_date|date('Y年n月j日 H:i') }}<input type="hidden" name="modify_date" value="{{ post.modify_date }}"><br>

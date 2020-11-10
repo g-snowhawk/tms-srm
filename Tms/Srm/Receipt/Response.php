@@ -76,7 +76,7 @@ class Response extends \Tms\Srm\Receipt
         } else {
             $type_of_receipt = null;
             if (!empty($receipt_id)) {
-                $receipt = $this->db->get('title,pdf_mapper', 'receipt_template', 'id = ?', [$receipt_id]);
+                $receipt = $this->db->get('title,pdf_mapper,mail_template', 'receipt_template', 'id = ?', [$receipt_id]);
                 $receipt_name = $receipt['title'];
 
                 if (!empty($receipt['pdf_mapper'])) {
@@ -94,6 +94,10 @@ class Response extends \Tms\Srm\Receipt
                     if (!empty($items)) {
                         $this->view->bind('duplicateTo', $items);
                     }
+                }
+
+                if (!empty($receipt['mail_template'])) {
+                    $this->view->bind('mail', 'enable');
                 }
             }
 
@@ -414,5 +418,76 @@ class Response extends \Tms\Srm\Receipt
         }
 
         return $query_string;
+    }
+
+    public function mailer(): void
+    {
+        $json = ['status' => 0, 'headers' => []];
+        if (preg_match("/^(\d{4}-\d{2}-\d{2}):(\d+)(:(\d+))?$/", $this->request->GET('id'), $match)) {
+            $issue_date = $match[1];
+            $receipt_number = $match[2];
+            $templatekey = $this->session->param('receipt_id');
+
+            $tmp = $this->db->get(
+                'mail_template,pdf_mapper',
+                'receipt_template',
+                'id = ? AND userkey = ?',
+                [$templatekey, $this->uid]
+            );
+
+            $mail_template = $tmp['mail_template'] ?? null;
+
+            if (!empty($mail_template)) {
+                $unit = $this->db->get(
+                    'issue_date,receipt_number,client_id,subject,due_date',
+                    'receipt',
+                    'userkey = ? AND templatekey = ? AND issue_date = ? AND receipt_number = ?',
+                    [$this->uid, $templatekey, $issue_date, $receipt_number]
+                );
+
+                $unit['total'] = $this->totalOfReceipt($issue_date, $receipt_number, $templatekey);
+
+                if (!empty($tmp['pdf_mapper'])) {
+                    $pdf_mapper = simplexml_load_string($tmp['pdf_mapper']);
+                    $format = (string)$pdf_mapper->attributes()->savepath;
+                    $pdf_path = $this->pathToPdf($format, $issue_date, $receipt_number);
+
+                    if (file_exists($pdf_path)) {
+                        $format = (string)$pdf_mapper->attributes()->download_name;
+                        $file_name = $this->pathToPdf($format, $issue_date, $receipt_number);
+                        $json['pdf'] = [
+                            'path' => $pdf_path,
+                            'basename' => basename($pdf_path),
+                            'size' => filesize($pdf_path),
+                            'attachment_name' => $file_name,
+                        ];
+                    }
+                }
+
+                $client = $this->db->get('company,fullname', 'receipt_to', 'id = ?', [$unit['client_id']]);
+                $unit['company'] = $client['company'];
+                $unit['fullname'] = $client['fullname'];
+
+                $this->view->bind('unit', $unit);
+
+                $template = $this->view->render($mail_template, true, true);
+
+                if (preg_match('/^(((cc|from|reply-to|subject):.+?(\r\n|\r|\n)){1,})?(.+)$/is', $template, $match)) {
+                    $template = trim($match[5]);
+                    if (preg_match_all('/(cc|from|reply-to|subject):\s*(.+)/i', $match[1], $metas)) {
+                        foreach ($metas[1] as $n => $value) {
+                            $json['headers'][$value] = trim($metas[2][$n]);
+                        }
+                    }
+                }
+
+                $json['template'] = $template;
+                $json['token'] = $this->session->param('ticket');
+            }
+        }
+
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($json);
+        exit;
     }
 }

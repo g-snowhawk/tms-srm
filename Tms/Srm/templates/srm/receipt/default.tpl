@@ -1,5 +1,26 @@
 {% extends "master.tpl" %}
 
+{% block head %}
+  <template id="mailer-template">
+    <div id="mailer-container">
+      <form action="{{ form.action }}" method="post" enctype="application/x-www-form-urlencoded">
+        <input type="hidden" name="stub">
+        <input type="hidden" name="mode" value="srm.receipt.receive:sendmail">
+        <input type="hidden" name="from">
+        <input type="hidden" name="reply-to">
+        <div class="controller">
+          <input type="reset" value="キャンセル">
+          <input type="submit" value="送信">
+        </div>
+        <div class="flex"><label>宛先</label><input type="text" name="to" required></div>
+        <div class="flex"><label>件名</label><input type="text" name="subject" required></div>
+        <div class="grow"><textarea name="mail_body" required></textarea></div>
+        <div class="plain"><input type="hidden" name="pdf_path"><input type="hidden" name="attachment_name"></div>
+      </form>
+    </div>
+  </template>
+{% endblock %}
+
 {% block main %}
 <input type="hidden" name="mode" value="srm.receipt.receive:remove">
 <div class="flex-row-box">
@@ -10,7 +31,7 @@
         <section{% if unit.unavailable == "1"%} class="unavailable"{% endif %}>
           <h2>{{ unit.subject }}</h2>
           <h3>{{ unit.company }}</h3>
-          <p>No.{{ unit.receipt_number }}&nbsp;発行日：{{ unit.issue_date|date('Y年m月d日') }}</p>
+          <p>No.{{ unit.receipt_number }}&nbsp;発行日：{{ unit.issue_date|date('Y年m月d日') }}{% if mail == 'enable' and unit.draft != '1' %}&nbsp;<a href="?mode=srm.receipt.response:mailer&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}" class="run-mailer">E-mail</a>{% endif %}</p>
           {% if typeOf == 'bill' or typeOf == 'receipt' %}
             <p class="bill-info">
             支払期限：<i>{{ unit.due_date|date('Y年m月d日') }}</i><br>

@@ -12,6 +12,7 @@ namespace Tms\Srm\Receipt;
 
 use P5\Http;
 use P5\Lang;
+use P5\Mail;
 
 /**
  * User management request receive class.
@@ -236,5 +237,48 @@ class Receive extends Response
     public function didSetSearchOptions()
     {
         return ['type' => 'close'];
+    }
+
+    public function sendmail(): void
+    {
+        $from = $this->request->param('from') ?? $this->userinfo['email'];
+        $reply_to = $this->request->param('reply-to');
+        $cc = $this->request->param('cc');
+        $attachment = $this->request->param('pdf_path');
+        $attachment_name = $this->request->param('attachment_name');
+
+        $mail = new Mail();
+
+        $mail->to($this->request->param('to'));
+        $mail->from($from);
+        if (defined('RETURN_PATH') && RETURN_PATH === 1) {
+            $mail->envfrom($from);
+        }
+        $mail->subject($this->request->param('subject'));
+        $mail->message($this->request->param('mail_body'));
+ 
+        if (!empty($reply_to)) {
+            $mail->setHeader('Reply-To', $reply_to);
+        }
+        if (!empty($cc)) {
+            $mail->cc($cc);
+        }
+
+        // self check
+        $mail->bcc($from);
+
+        if (!empty($attachment) && file_exists($attachment)) {
+            $mail->attachment($attachment, $attachment_name);
+        }
+
+        $json = ['status' => 0];
+        if (false === $mail->send()) {
+            $json['status'] = 1;
+            $json['message'] = 'Server Error';
+        }
+
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($json);
+        exit;
     }
 }

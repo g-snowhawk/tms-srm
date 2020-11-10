@@ -6,8 +6,6 @@
  * This software is released under the MIT License.
  * https://www.plus-5.com/licenses/mit-license
  */
-'use strict';
-
 let searchQueries = [];
 let clearSearches = [];
 let searchTimer = undefined;
@@ -41,6 +39,10 @@ function initializeReceiptList(event) {
             next.addEventListener('click', execSearchReceipt);
         }
         clearSearches.push(next);
+    });
+
+    document.querySelectorAll('a.run-mailer').forEach((element) => {
+        element.addEventListener('click', runMailerForReceipt);
     });
 }
 
@@ -111,4 +113,133 @@ function execSearchReceipt(event) {
     searchTimer = setTimeout((url) => {
         location.href = url;
     }, 300, getSearchURI(element.value));
+}
+
+function runMailerForReceipt(event) {
+    event.preventDefault();
+    const element = event.target;
+
+    fetch(element.href, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+    })
+    .then((response) => {
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
+            }
+            throw new Error("Unexpected response");
+        } else {
+            throw new Error("Server Error");
+        }
+    })
+    .then((json) => {
+        if (json.status !== 0) {
+            throw new ApplicationError(json.message);
+        }
+        openMailer(json);
+    })
+    .catch((error) => {
+        if (error.name === 'ApplicationError') {
+            alert(error.message);
+        }
+        console.error(error);
+    });
+}
+
+function openMailer(data) {
+    const template = document.getElementById('mailer-template');
+    if (!template) return;
+
+    document.body.appendChild(template.content.cloneNode(true));
+    const mailer = document.querySelector('#mailer-container');
+
+    const token = mailer.querySelector('input[name=stub]');
+    token.value = data.token;
+
+    for (let key in data.headers) {
+        const element = mailer.querySelector('input[name=' + key + ']');
+        if (element) {
+            element.value = data.headers[key];
+        }
+    }
+
+    const pdfPath = mailer.querySelector('input[name=pdf_path]');
+    const attachmentName = mailer.querySelector('input[name=attachment_name]');
+    if (data.pdf) {
+        pdfPath.value = data.pdf.path;
+        attachmentName.value = data.pdf.attachment_name;
+        const text = document.createTextNode(data.pdf.attachment_name + ' ( ' + data.pdf.size + 'bytes )');
+        pdfPath.parentNode.insertBefore(text, pdfPath);
+    } else {
+        pdfPath.parentNode.parentNode.removeChild(pdfPath.parentNode);
+    }
+
+    const textarea = mailer.querySelector('textarea');
+    textarea.value = data.template;
+
+    const canceller = mailer.querySelector('input[type=reset]');
+    canceller.addEventListener('click', closeMailer);
+
+    const submit = mailer.querySelector('input[type=submit]');
+    submit.addEventListener('click', sendMail);
+}
+
+function closeMailer(event) {
+    event.preventDefault();
+    const mailer = document.querySelector('#mailer-container');
+    mailer.parentNode.removeChild(mailer);
+}
+
+function sendMail(event) {
+    event.preventDefault();
+    const element = event.target;
+    const form = element.form;
+
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then((response) => {
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
+            }
+            throw new Error("Unexpected response");
+        } else {
+            throw new Error("Server Error");
+        }
+    })
+    .then((json) => {
+        if (json.status !== 0) {
+            throw new ApplicationError(json.message);
+        }
+        // some functions
+        closeMailer(event);
+    })
+    .catch((error) => {
+        if (error.name === 'ApplicationError') {
+            alert(error.message);
+        }
+        console.error(error);
+    });
+}
+
+
+class ApplicationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'ApplicationError';
+    }
 }
