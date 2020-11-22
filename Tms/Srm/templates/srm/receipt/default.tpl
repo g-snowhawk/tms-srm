@@ -31,12 +31,14 @@
         <section{% if unit.unavailable == "1"%} class="unavailable"{% endif %}>
           <h2>{{ unit.subject }}</h2>
           <h3>{{ unit.company }}</h3>
-          <p>No.{{ unit.receipt_number }}&nbsp;発行日：{{ unit.issue_date|date('Y年m月d日') }}{% if mail == 'enable' and unit.draft != '1' %}&nbsp;<a href="?mode=srm.receipt.response:mailer&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}" class="run-mailer">E-mail</a>{% endif %}</p>
+          <p>No.{{ unit.receipt_number }}&nbsp;発行日：{{ unit.issue_date|date('Y年m月d日') }}{% if mail == 'enable' and unit.draft != '1' and unit.unavailable != '1' %}&nbsp;<a href="?mode=srm.receipt.response:mailer&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}" class="run-mailer">E-mail</a>{% endif %}</p>
           {% if typeOf == 'bill' or typeOf == 'receipt' %}
-            <p class="bill-info">
+            <p class="bill-info{% if unit.unavailable == '1' %} strike{% endif %}">
             支払期限：<i>{{ unit.due_date|date('Y年m月d日') }}</i><br>
             {% if unit.draft == '1' %}
               ？入金日：<span>---</span>
+            {% elseif unit.unavailable == '1' %}
+              ×入金日：
             {% elseif unit.collected == 1 %}
               ●入金日：<strong>未入金</strong>
             {% elseif unit.collected == 2 %}

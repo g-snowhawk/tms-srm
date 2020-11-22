@@ -36,6 +36,10 @@ function initReceipt(element) {
 
     if (element.form.draft.value !== '1') {
         element.addEventListener('keyup', updateReceipt);
+        const relation = element.form.relation;
+        if (relation) {
+            relation.addEventListener('click', updateReceipt);
+        }
     }
 }
 
@@ -47,11 +51,19 @@ function updateReceipt(event) {
     const form = inputReceipt.form;
     const relation = form.relation;
 
+    if (event.target === relation && relation.checked) {
+        if (!inputReceipt.value.match(/^[0-9]{4}[\-\/][0-9]{1,2}[\-\/][0-9]{1,2}$/)) {
+            const value = prompt('ha?');
+            if (value !== null) {
+                inputReceipt.value = value;
+            }
+        }
+    }
+
+    let message = inputReceipt.dataset.confirm;
+    message += (relation.checked) ? relation.dataset.checkedMessage : relation.dataset.uncheckedMessage;
+
     if (inputReceipt.value.match(/^[0-9]{4}[\-\/][0-9]{1,2}[\-\/][0-9]{1,2}$/)) {
-
-        let message = inputReceipt.dataset.confirm;
-        message += (relation.checked) ? relation.dataset.checkedMessage : relation.dataset.uncheckedMessage;
-
         if (confirm(message)) {
             for (let i = 0; i < form.elements.length; i++) {
                 const element = form.elements[i];
@@ -71,10 +83,27 @@ function updateReceipt(event) {
             }
 
             form.submit();
-        } else if (event.target === inputReceipt && !relation.checked) {
-            relation.addEventListener('click', updateReceipt);
         }
-    } else {
-        relation.removeEventListener('click', updateReceipt);
+    } else if (relation.checked) {
+        if (confirm(message)) {
+            for (let i = 0; i < form.elements.length; i++) {
+                const element = form.elements[i];
+                element.disabled = false;
+            }
+
+            const hiddens = {
+                's1_submit': 'via JS',
+                'faircopy': '0',
+                'create-pdf': 'none',
+            };
+            for (let name in hiddens) {
+                let hidden = form.appendChild(document.createElement('input'));
+                hidden.type = 'hidden';
+                hidden.name = name;
+                hidden.value = hiddens[name];
+            }
+
+            form.submit();
+        }
     }
 }

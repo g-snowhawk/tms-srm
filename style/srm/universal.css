@@ -486,11 +486,14 @@ ul.button-list li a:hover {
   justify-content: space-between;
 }
 
+#srm-receipt-default .section-list section .bill-info.strike,
 #srm-receipt-default .section-list section.unavailable h2,
 #srm-receipt-default .section-list section.unavailable h3,
 #srm-receipt-default .section-list section.unavailable h3 + p {
   color: #999;
   text-decoration: line-through;
+  text-decoration-color: rgba(255,0,0,0.6);
+  text-decoration-style: double;
 }
 
 
