@@ -2,7 +2,7 @@
 
 {% block main %}
   {% set displayFooter = 0 %}
-  <input type="hidden" name="mode" value="srm.client.receive:remove">
+  <input type="hidden" name="mode" value="srm.client.receive:update">
   <div class="wrapper">
     <h1>取引先一覧</h1>
     {% for unit in users %}
@@ -10,29 +10,19 @@
         <table class="nlist">
           <thead>
             <tr>
-              <td>ID</td>
               <td>会社名</td>
               <td>担当者</td>
-              <td> </td>
-              <td> </td>
+              <td>住所</td>
+              <td>不可視</td>
             </tr>
           </thead>
           <tbody>
       {% endif %}
       <tr>
-        <td>{{ unit.id }}</td>
         <td>{{ unit.company }}</td>
         <td>{{ unit.fullname}}</td>
-        {% if apps.hasPermission('srm.client.update') %}
-          <td class="button"><a href="?mode=srm.client.response:edit&id={{ unit.id|url_encode }}">編集</a></td>
-        {% else %}
-          <td class="button">&nbsp;</td>
-        {% endif %}
-        {% if apps.hasPermission('srm.client.delete') %}
-          <td class="button reddy"><label><input type="radio" name="delete" value="{{ unit.id }}">削除</label></td>
-        {% else %}
-          <td class="button reddy">&nbsp;</td>
-        {% endif %}
+        <td>{{ unit.address1 ~ (unit.address2 is empty ? '' : ' ' ~ unit.address2) }}</td>
+        <td class="ta-r"><input type="checkbox" name="no_suggestion[{{ unit.id }}]" value="yes"{% if unit.no_suggestion == 'yes' %} checked{% endif %} data-client-id="{{ unit.id }}"></td>
       </tr>
       {% if loop.last %}
           </tbody>
@@ -42,13 +32,9 @@
     {% else %}
       <p>未だ取引先の登録がありません</p>
     {% endfor %}
-    {% if apps.hasPermission('srm.client.create') %}
-      <p class="create function-key"><a href="?mode=srm.client.response:edit"><mark>＋</mark>新規取引先</a></p>
-    {% endif %}
-    {% if displayFooter == 1 %}
-      <div class="form-footer">
-        <input type="submit" name="s1_submit" value="実行">
-      </div>
-    {% endif %}
   </div>
+{% endblock %}
+
+{% block pagefooter %}
+  <script src="/script/srm/clients.js"></script>
 {% endblock %}

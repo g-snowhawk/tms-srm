@@ -39,18 +39,13 @@ class Response extends \Tms\Srm\Client
     {
         $this->checkPermission('srm.client.read');
 
-        $ret = $this->db->nsmGetDecendants(
-            'children.id, children.company, children.fullname',
-            '(SELECT * FROM table::user WHERE id = ?)',
-            '(SELECT * FROM table::user WHERE restriction = ?)',
-            [$this->uid, $this->packageName()]
+        $users = $this->db->select(
+            'id,company,fullname,address1,address2,no_suggestion',
+            'receipt_to',
+            'WHERE userkey = ? ORDER by company,fullname',
+            [$this->uid]
         );
-        $this->view->bind('users', $ret);
-
-        $globals = $this->view->param();
-        $form = $globals['form'];
-        $form['confirm'] = \P5\Lang::translate('CONFIRM_DELETE_DATA');
-        $this->view->bind('form', $form);
+        $this->view->bind('users', $users);
 
         $this->setHtmlId('srm-client-default');
         $this->view->render('srm/client/default.tpl');

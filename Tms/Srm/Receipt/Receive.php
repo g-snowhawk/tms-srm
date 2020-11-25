@@ -137,6 +137,7 @@ class Receive extends Response
                   FROM (SELECT id,company,fullname,zipcode,address1,address2,division
                           FROM table::receipt_to
                          WHERE userkey = ?
+                           AND no_suggestion = 'no'
                            AND REPLACE(REPLACE(company,'{$ideographic_space}',' '),' ','') LIKE ? COLLATE {$collate}
                        ) t
                   LEFT JOIN (SELECT client_id,bank_id,term,valid,delivery,payment

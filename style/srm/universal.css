@@ -595,3 +595,35 @@ a.run-mailer:before {
   font-size: 0.7rem;
   padding: 0.5em;
 }
+
+
+html#srm-client-default #container form {
+  display: flex;
+  justify-content: center;
+}
+html#srm-client-default #container .wrapper {
+  max-width: 90%;
+  min-width: 768px;
+  position: relative;
+}
+html#srm-client-default #container .wrapper table thead tr {
+  border-bottom: 1px solid transparent;
+}
+html#srm-client-default #container .wrapper table thead td {
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+html#srm-client-default #container .wrapper table thead td:after {
+  border-bottom: 1px solid #000;
+  bottom: 0;
+  content: '';
+  display: block;
+  left: 0;
+  margin-bottom: -1px;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 11;
+}
