@@ -108,7 +108,7 @@ class Response extends \Tms\Srm\Receipt
             if ($type_of_receipt === 'bill') {
                 $collected = "CASE WHEN r.due_date IS NULL AND r.receipt IS NULL THEN 3
                                    WHEN r.receipt IS NOT NULL THEN 3
-                                   WHEN r.receipt IS NULL AND r.due_date >= NOW() THEN 2
+                                   WHEN r.receipt IS NULL AND DATE_FORMAT(r.due_date,'%Y-%m-%d 23:59:59') > NOW() THEN 2
                                    ELSE 1
                                END";
             }
