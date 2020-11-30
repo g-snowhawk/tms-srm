@@ -40,20 +40,31 @@ function initReceipt(element) {
         if (relation) {
             relation.addEventListener('click', updateReceipt);
         }
+        const cash = element.form.cash;
+        if (cash) {
+            cash.addEventListener('click', updateReceipt);
+        }
     }
 }
 
 function updateReceipt(event) {
-    if (event.type === 'keyup' && event.key !== 'Enter') {
+    const trigger = event.target;
+    const form = inputReceipt.form;
+    const relation = form.relation;
+    const cash = form.cash;
+
+    if (!form.receipt_number
+        || !form.draft
+        || form.draft.value === '1'
+        || (event.type === 'click' && !relation.checked)
+        || (event.type === 'keyup' && event.key !== 'Enter')
+    ) {
         return;
     }
 
-    const form = inputReceipt.form;
-    const relation = form.relation;
-
     if (event.target === relation && relation.checked) {
         if (!inputReceipt.value.match(/^[0-9]{4}[\-\/][0-9]{1,2}[\-\/][0-9]{1,2}$/)) {
-            const value = prompt('ha?');
+            const value = prompt(relation.dataset.prompt ?? 'When is the deposit date?');
             if (value !== null) {
                 inputReceipt.value = value;
             }
@@ -63,47 +74,80 @@ function updateReceipt(event) {
     let message = inputReceipt.dataset.confirm;
     message += (relation.checked) ? relation.dataset.checkedMessage : relation.dataset.uncheckedMessage;
 
-    if (inputReceipt.value.match(/^[0-9]{4}[\-\/][0-9]{1,2}[\-\/][0-9]{1,2}$/)) {
+    if (cash) {
+        const prefix = (cash.checked) ? cash.dataset.checkedMessage : cash.dataset.uncheckedMessage;
+        message = prefix + message;
+    }
+
+    if (relation.checked || inputReceipt.value.match(/^[0-9]{4}[\-\/][0-9]{1,2}[\-\/][0-9]{1,2}$/)) {
         if (confirm(message)) {
-            for (let i = 0; i < form.elements.length; i++) {
-                const element = form.elements[i];
-                element.disabled = false;
-            }
-
-            const hiddens = {
-                's1_submit': 'via JS',
-                'faircopy': '0',
-                'create-pdf': 'none',
-            };
-            for (let name in hiddens) {
-                let hidden = form.appendChild(document.createElement('input'));
-                hidden.type = 'hidden';
-                hidden.name = name;
-                hidden.value = hiddens[name];
-            }
-
-            form.submit();
-        }
-    } else if (relation.checked) {
-        if (confirm(message)) {
-            for (let i = 0; i < form.elements.length; i++) {
-                const element = form.elements[i];
-                element.disabled = false;
-            }
-
-            const hiddens = {
-                's1_submit': 'via JS',
-                'faircopy': '0',
-                'create-pdf': 'none',
-            };
-            for (let name in hiddens) {
-                let hidden = form.appendChild(document.createElement('input'));
-                hidden.type = 'hidden';
-                hidden.name = name;
-                hidden.value = hiddens[name];
-            }
-
-            form.submit();
+            updateReceiptExecution(form);
         }
     }
+}
+
+function updateReceiptExecution(form) {
+    const data = new FormData();
+    data.append('stub', form.stub.value);
+    data.append('mode', 'srm.receipt.receive:update-receipt');
+    data.append('issue_date', form.issue_date.value);
+    data.append('receipt_number', form.receipt_number.value);
+    data.append('receipt', form.receipt.value);
+    data.append('draft', form.draft.value);
+
+    data.append('company', form.company.value);
+    data.append('subject', form.subject.value);
+
+    let bankID = '';
+    if (form.bank_id.options) {
+        const i = form.bank_id.selectedIndex;
+        if (i !== -1) {
+            bankID = form.bank_id.options[i].value;
+        }
+    }
+    data.append('bank_id', bankID);
+
+    if (form.cash.checked) {
+        data.append('cash', form.cash.value);
+    }
+
+    if (form.relation.checked) {
+        data.append('relation', form.relation.value);
+    }
+
+    fetch(form.action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: data
+    })
+    .then((response) => {
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
+            }
+            try {
+                console.log(response.text());
+            } catch(e) {
+                //
+            }
+            throw new Error("Unexpected response");
+        } else {
+            throw new Error("Server Error");
+        }
+    })
+    .then((json) => {
+        if (json.status !== 0) {
+            throw new Error(json.message);
+        }
+        // some functions
+        form.dataset.freeUnload = '1';
+        location.href = json.url;
+    })
+    .catch((error) => {
+        console.error(error);
+    });
 }

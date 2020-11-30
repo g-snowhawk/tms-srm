@@ -282,4 +282,68 @@ class Receive extends Response
         echo json_encode($json);
         exit;
     }
+
+    public function updateReceipt(): void
+    {
+        $post = $this->request->post();
+
+        $receipt_id = $this->session->param('receipt_id');
+        $issue_date = $post['issue_date'];
+        $receipt_number = $post['receipt_number'];
+
+        $this->db->begin();
+
+
+        $json = [ 'status' => 1 ];
+        if (false !== $this->db->update(
+            'receipt',
+            [ 'receipt' => $post['receipt'] ],
+            'userkey = ? AND issue_date = ? AND receipt_number = ? AND templatekey = ?',
+            [$this->uid, $issue_date, $receipt_number, $receipt_id]
+        )) {
+
+            $pdf_mapper_source = $this->db->get(
+                'pdf_mapper',
+                'receipt_template',
+                'userkey = ? AND id = ?',
+                [$this->uid, $receipt_id]
+            );
+
+            if (!empty($pdf_mapper_source)) {
+                $pdf_mapper = simplexml_load_string($pdf_mapper_source);
+                $current_receipt_type = (string)$pdf_mapper->attributes()->typeof;
+            }
+
+            $key_array = [
+                date('Y-m-d', strtotime($issue_date)),
+                $receipt_number,
+                $this->uid,
+                $receipt_id,
+                '0',
+            ];
+
+            $total_price = $this->calcurateTotals(implode('-',$key_array));
+
+            if (false !== $this->app->execPlugin(
+                'afterSaveReceipt',
+                $post,
+                $current_receipt_type,
+                $total_price
+            )) {
+                $this->db->commit();
+                $json['status'] = 0;
+                $json['url'] = $this->app->systemURI() . "?mode=" . self::REDIRECT_MODE;
+            } else {
+                $json['message'] = 'Failed to execute Plugin';
+            }
+        } else {
+            $json['message'] = 'Database Error';
+        }
+
+        if ($json['status'] === 1) {
+            $this->db->rollback();
+        }
+
+        $this->responseJson($json);
+    }
 }
