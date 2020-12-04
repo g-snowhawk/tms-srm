@@ -58,7 +58,7 @@
             </div>
             <div>
               {% if apps.hasPermission('srm.update') %} 
-              <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}{% if unit.draft == '1'%}&amp;draft=1{% endif %}">明細表示</a>
+              <a href="?mode=srm.receipt.response:edit&id={{ unit.issue_date|date('Y-m-d') ~ ':' ~ unit.receipt_number }}{% if unit.draft == '1'%}&amp;draft=1{% endif %}">{{ unit.draft != '1' ? '明細表示' : '編集' }}</a>
               {% endif %}
               {% if unit.unavailable == '1' %}
                 <span>無効</span>
