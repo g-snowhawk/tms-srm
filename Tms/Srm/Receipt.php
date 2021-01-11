@@ -934,7 +934,7 @@ class Receipt extends \Tms\Srm
         );
     }
 
-    protected function cloneReceipt($templatekey, $issue_date, $receipt_number, $page_number, $destination = null, &$draft)
+    protected function cloneReceipt($templatekey, $issue_date, $receipt_number, $page_number, &$draft, $destination = null)
     {
         $this->db->begin();
 
