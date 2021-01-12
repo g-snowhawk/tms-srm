@@ -3,7 +3,7 @@
   <ul id="suggested-clients">
   {% endif %}
     <li>
-      <a data-valid="{{ client.valid }}" data-term="{{ client.term }}" data-delivery="{{ client.delivery }}" data-payment="{{ client.payment }}" data-bank-id="{{ client.bank_id }}">
+      <a href="#" data-valid="{{ client.valid }}" data-term="{{ client.term }}" data-delivery="{{ client.delivery }}" data-payment="{{ client.payment }}" data-bank-id="{{ client.bank_id }}">
         <span class="client-data" id="company">{{ client.company }}</span>
         <span class="client-data" id="division">{{ client.division }}</span>
         <span class="client-data" id="fullname">{{ client.fullname }}</span>

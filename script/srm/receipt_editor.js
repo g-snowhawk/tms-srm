@@ -65,7 +65,6 @@ function initializeReceiptEditor(event) {
     inputCompany.addEventListener('keyup', listenerForSuggestion);
     inputCompany.addEventListener('compositionstart', switchComposing);
     inputCompany.addEventListener('compositionend', switchComposing);
-    inputCompany.addEventListener('blur', listenerForSuggestion);
     inputCompany.addEventListener('focus', listenerForSuggestion);
 
     if (buttonDelete) {
@@ -333,7 +332,7 @@ function hideSuggestionList(event) {
     displaySuggestionList('');
 }
 
-function displaySuggestionList(source) {
+function displaySuggestionList(source, checkCurrent) {
 
     if (debugLevel > 0) {
         console.log(source);
@@ -346,9 +345,12 @@ function displaySuggestionList(source) {
     if (list && !suggestionListLock) {
         list.parentNode.removeChild(list);
         window.removeEventListener('mouseup', hideSuggestionList);
+        window.removeEventListener('keydown', moveFocusSuggestionList);
     }
     if (source === '') {
-        return;
+        if (!checkCurrent) {
+            return;
+        }
     }
 
     list = suggestionListContainer.appendChild(document.createElement('div'));
@@ -364,20 +366,74 @@ function displaySuggestionList(source) {
     }
 
     window.addEventListener('mouseup', hideSuggestionList);
+    window.addEventListener('keydown', moveFocusSuggestionList);
 }
 
-//function suggestComplete(response) {
-//    response.json().then(function(data){
-//
-//        if (debugLevel > 0) {
-//            console.log(data);
-//        }
-//
-//        if (data.status === 0) {
-//            displaySuggestionList(data.source);
-//        }
-//    }).catch(error => console.error(error));
-//}
+function moveFocusSuggestionList(event) {
+    if (event.key !== 'ArrowDown'
+        && event.key !== 'ArrowUp'
+        && event.key !== 'Tab'
+        && event.key !== ' '
+        && event.key !== 'Enter'
+        && event.key !== 'Escape'
+    ) {
+        return;
+    }
+
+    const list = document.getElementById(suggestionListID);
+    if (!list) {
+        return;
+    }
+    const anchors = list.getElementsByTagName('a');
+
+    let current = document.activeElement;
+    if (!current.findParent('#' + suggestionListID)) {
+        if (event.key !== 'Enter') {
+            current = anchors[0];
+            current.focus();
+        }
+        return;
+    }
+
+    event.preventDefault();
+    switch (event.key) {
+        case 'ArrowDown':
+        case 'Tab':
+        case ' ':
+            for (let i = 0; i < anchors.length; i++) {
+                if (anchors[i] === current) {
+                    const next = anchors[(i+1)];
+                    if (next) {
+                        next.focus();
+                        return;
+                    }
+                }
+            }
+            if (event.key !== 'ArrowDown') {
+                anchors[0].focus();
+            }
+            break;
+        case 'ArrowUp':
+            for (let i = 0; i < anchors.length; i++) {
+                if (anchors[i] === current) {
+                    const next = anchors[(i-1)];
+                    if (next) {
+                        next.focus();
+                        return;
+                    }
+                }
+            }
+            inputCompany.focus();
+            break;
+        case 'Enter':
+            current.click();
+            break;
+        case 'Escape':
+            displaySuggestionList('');
+            inputCompany.focus();
+            break;
+    }
+}
 
 function suggestClient() {
     if (inputCompany.value === '') {
@@ -387,6 +443,9 @@ function suggestClient() {
 
     if (debugLevel > 0) {
         console.log(inputCompany.value);
+    }
+
+    if (document.getElementById(suggestionListID)) {
     }
 
     const form = inputCompany.form;
@@ -452,7 +511,7 @@ function listenerForSuggestion(event) {
     let inputedValue = event.target.value;
     switch (event.type) {
         case 'blur':
-            displaySuggestionList('');
+            displaySuggestionList('', true);
             break;
         case 'keyup':
             if (event.key === 'ArrowDown'

@@ -242,15 +242,23 @@ table.receipt-detail + .notice ul {
   padding: 0;
 }
 #client-data #suggestion-list ul li a {
+  border-top: 1px solid rgba(0,0,0,0.12);
+  color: inherit;
   display: block;
   font-size: .7rem;
-  padding: .3em .5em;
+  outline: none;
+  padding: .5em;
+  text-decoration: none;
 }
 #client-data #suggestion-list ul li a:first-child {
   font-size: .8rem;
 }
+#client-data #suggestion-list ul li a:focus,
 #client-data #suggestion-list ul li a:hover {
   background: #efefef;
+}
+#client-data #suggestion-list ul li:first-child a {
+  border-top: 0 none rgba(0,0,0,0);
 }
 #client-data #suggestion-list #division,
 #client-data #suggestion-list #zipcode {
