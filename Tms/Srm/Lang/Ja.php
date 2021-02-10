@@ -31,4 +31,7 @@ class Ja extends \P5\Lang
     const SUCCESS_AVAILABLE   = "帳票を有効にしました";
     const FAILED_UNAVAILABLE  = "帳票を無効にできませんでした";
     const FAILED_AVAILABLE    = "帳票を有効にできませんでした";
+
+    const UPDATED_BILLING_DATE = "締日を更新しました";
+    const INCORRECT_DATE_VALUE = "不正な日付です";
 }

@@ -6,7 +6,6 @@
  * This software is released under the MIT License.
  * https://www.plus-5.com/licenses/mit-license
  */
-'use strict';
 
 const debugLevel = 0;
 
@@ -16,6 +15,7 @@ const displayTotal = document.getElementById('total');
 const displayTax = document.getElementById('tax');
 const inputAPrice = document.querySelector('input[name=additional_1_price]');
 const inputBPrice = document.querySelector('input[name=additional_2_price]');
+const inputBillingDate = document.querySelector('input[name=billing_date]');
 const inputCompany = document.querySelector('input[name=company]');
 const buttonDelete = document.querySelector('input[name=s1_delete]');
 const buttonAvailable = document.querySelector('a[class*=availables]');
@@ -538,6 +538,10 @@ function lockForm() {
                     element.disabled = true;
                 }
             }
+
+            if (inputBillingDate) {
+                inputBillingDate.addEventListener('keydown', updateBillingDate);
+            }
         }
     }
 }
@@ -639,4 +643,61 @@ function available(event) {
 function cancelConfirm(event) {
     const element = event.target;
     delete element.form.dataset.confirm;
+}
+
+function updateBillingDate(event) {
+    const element = event.target;
+
+    if (event.key === 'Enter' && element.value.match(/^[0-9]{4}[^0-9][0-9]{1,2}[^0-9][0-9]{1,2}[0-9]?$/)) {
+        if (!confirm(element.dataset.confirm)) {
+            return;
+        }
+        const form = element.form;
+        const params = [...new URLSearchParams(window.location.search).entries()].reduce((obj, e) => ({...obj, [e[0]]: e[1]}), {});
+
+        let data = new FormData();
+        data.append('stub', form.stub.value);
+        data.append('returntype', 'json');
+        data.append('mode', 'srm.receipt.receive:update-billing-date');
+        data.append('id', params.id);
+        data.append('billing_date', element.value);
+
+        if (isFetching) {
+            fetchCanceller.abort();
+            isFetching = false;
+        }
+
+        isFetching = true;
+        fetch(form.action, {
+            signal: fetchCanceller.signal,
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: data,
+        }).then(response => { 
+            if (response.ok) {
+                let contentType = response.headers.get("content-type");
+                if (contentType.match(/^application\/json/)) {
+                    return response.json();
+                }
+                throw new Error('Unexpected response'.translate());
+            } else {
+                throw new Error('Server Error'.translate());
+            }
+        })
+        .then(json => {
+            alert(json.message);
+        }).catch(error => {
+            if (error.name === 'AbortError') {
+                console.warn("Aborted!!");
+                fetchCanceller = new AbortController()
+            } else {
+                console.error(error)
+            }
+        }).then(() => {
+            isFetching = false;
+        });
+    }
 }

@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS `TMS_receipt` (
   `bank_id` varchar(15) DEFAULT NULL,
   `due_date` date DEFAULT NULL,
   `receipt` date DEFAULT NULL,
+  `billing_date` date DEFAULT NULL,
   `term` varchar(50) DEFAULT NULL,
   `valid` varchar(50) DEFAULT NULL,
   `sales` varchar(1) DEFAULT NULL,

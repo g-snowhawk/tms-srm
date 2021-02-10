@@ -25,8 +25,8 @@
             <span class="extended-fields meta-data{% if linked == 'yes' %} linked{% endif %}">
             {% endif %}
             {% if 'before-linked' not in field.class or linked != 'yes' %}
-              {% if field.type == 'text' %}
-              <input type="text" name="{{ field.name }}" value="{{ post[field.name] }}" placeholder="{{ field.label }}"{%- for key in field|keys %}{% if key not in ['type','name','label'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}><br>
+              {% if field.type == 'text' or field.type == 'date' %}
+              <input type="{{ field.type }}" name="{{ field.name }}" value="{{ post[field.name] }}" placeholder="{{ field.label }}"{%- for key in field|keys %}{% if key not in ['type','name','label'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}><br>
               {% elseif field.type == 'checkbox' %}
               <label{% if 'nowrap' in field.class %} class="nowrap"{% endif %}><input type="checkbox" name="{{ field.name }}" value="{{ field.value }}"{% if post[field.name] == field.value %} checked{% endif %}{%- for key in field|keys %}{% if key not in ['type','name','label','value'] %} {{ key }}="{{ field[key] }}"{% endif %}{% endfor -%}>{{ field.label }}</label><br>
               {% elseif field.type == 'textarea' %}

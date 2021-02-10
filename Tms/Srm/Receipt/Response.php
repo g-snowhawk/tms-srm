@@ -10,6 +10,8 @@
 
 namespace Tms\Srm\Receipt;
 
+use P5\Mail;
+
 /**
  * Template management request response class.
  *
@@ -489,6 +491,171 @@ class Response extends \Tms\Srm\Receipt
 
         header('Content-type: application/json; charset=utf-8');
         echo json_encode($json);
+        exit;
+    }
+
+    /**
+     * TODO:
+     *  - separate by tax rate
+     *  - support to multiple pages      
+     */
+    public function remindBilling(): void
+    {
+        if (php_sapi_name() !== 'cli') {
+            trigger_error('Bad Requiest!', E_USER_ERROR);
+        }
+
+        $today = date('Y-m-d');
+        $template = 'srm/receipt/remind_billing.tpl';
+        $records = $this->db->select(
+            '*',
+            'receipt',
+            'WHERE billing_date = ?'.
+            'ORDER BY userkey, issue_date, receipt_number',
+            [$today]
+        );
+
+        $data = [];
+        $bill_id = [];
+        foreach ($records as $record) {
+            $client_fields = ['company','division','fullname','zipcode','address1','address2'];
+            $client = $record['client_id'];
+            $uname = $this->db->get('uname', 'user', 'id = ?', [$record['userkey']]);
+            $this->resetUserByCli($uname);
+
+            $bill_id[$uname] = $this->receiptIdFromType('bill');
+
+            if (!isset($data[$uname])) {
+                $data[$uname] = [];
+            }
+            if (!isset($data[$uname][$client])) {
+                $data[$uname][$client] = [];
+            }
+
+            $total = $this->totalOfReceipt(
+                $record['issue_date'],
+                $record['receipt_number'],
+                $record['templatekey'],
+                '0',
+                true
+            );
+
+            $data[$uname][$client][] = [
+                'content' => sprintf('No.%s: %s', $record['receipt_number'], $record['subject']),
+                'price' => $total,
+                'quantity' => 1,
+                'issue_date' => $record['issue_date'],
+                'receipt_number' => $record['receipt_number'],
+                'templatekey' => $record['templatekey'],
+            ];
+        }
+
+        $this->request->param('draft', '1');
+        $this->request->param('note', '');
+
+        $this->view->bind('billing_date', time());
+
+        foreach($data as $uname => $clients) {
+            $this->resetUserByCli($uname);
+            $this->session->param('receipt_id', $bill_id[$uname]);
+
+            $draft_bills = [];
+            foreach ($clients as $client => $list) {
+
+                $to = $this->db->get('*', 'receipt_to', 'id = ?', [$client]);
+                if (empty($to)) {
+                    continue;
+                }
+
+                $client_name = $to['company'] ?? '';
+
+                // Clear cached receipt_number
+                $this->request->param('receipt_number', null, true);
+
+                if (count($list) === 1) {
+
+                    $page_number = 1;
+
+                    if (false === $this->cloneReceipt(
+                        $list[0]['templatekey'],
+                        $list[0]['issue_date'],
+                        $list[0]['receipt_number'],
+                        $page_number,
+                        $draft,
+                        $bill_id[$uname]
+                    )) {
+                        trigger_error('Database Error.');
+                    } else {
+                        $draft_bills[] = [
+                            'number' => $this->clone_receipt_number,
+                            'company' => $client_name,
+                        ];
+                    }
+                    continue;
+                }
+
+                foreach($client_fields as $field) {
+                    $this->request->param($field, ($to[$field] ?? ''));
+                }
+
+                $this->request->param('issue_date', $today);
+                $this->request->param('subject', 'Billing');
+
+                $line = 0;
+                $content = [];
+                $price = [];
+                $quantity = [];
+
+                foreach ($list as $attr) {
+                    ++$line;
+                    $content[$line] = $attr['content'];
+                    $price[$line] = $attr['price'];
+                    $quantity[$line] = $attr['quantity'];
+                    $unit[$line] = '';
+                }
+
+                $this->request->param('content', $content);
+                $this->request->param('price', $price);
+                $this->request->param('quantity', $quantity);
+                $this->request->param('unit', $unit);
+
+                if (false === $this->save()) {
+                    trigger_error('Database Error');
+                } else {
+                    $draft_bills[] = [
+                        'number' => $this->clone_receipt_number,
+                        'company' => $client_name,
+                    ];
+                }
+            }
+
+            $email = $this->userinfo['email'];
+            if (!empty($email)) {
+                $this->view->bind('draft_bills', $draft_bills);
+                $eml = $this->view->render($template, true);
+
+                list($header, $body) = preg_split('/(\r\n|\r|\n){2}/', $eml, 2);
+
+                $mail = new Mail();
+                $mail->from(Mail::noreplyAt());
+                if (preg_match_all('/^([^:]+):\s*([^\r\n]+)/', $header, $match)) {
+                    foreach($match[1] as $i => $key) {
+                        $func = strtolower($key);
+                        if (method_exists($mail, $func)) {
+                            $mail->$func($match[2][$i]);
+                        } else {
+                            $mail->setHeader($key, $match[2][$i]);
+                        }
+                    }
+                }
+                $mail->to();
+                $mail->to($email);
+                $mail->message($body);
+
+                $mail->send();
+            }
+        }
+
         exit;
     }
 }

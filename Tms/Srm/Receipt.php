@@ -28,6 +28,8 @@ class Receipt extends \Tms\Srm
     private $current_receipt_type;
     private $total_price;
 
+    protected $clone_receipt_number;
+
     /**
      * Save the data.
      *
@@ -105,6 +107,7 @@ class Receipt extends \Tms\Srm
             }
 
             if (false !== $after_follow) {
+                $this->clone_receipt_number = $post['receipt_number'];
                 return $this->db->commit();
             }
         }
@@ -999,6 +1002,11 @@ class Receipt extends \Tms\Srm
         }
 
         if (!empty($destination) && $templatekey !== $destination) {
+            if (php_sapi_name() === 'cli') {
+                $this->clone_receipt_number = $clone_receipt_number;
+                return true;
+            }
+
             $this->session->param('receipt_id', $destination);
             $this->session->clear('receipt_page');
             parent::redirect("srm.receipt.response:edit\&id\={$clone_issue_date}:{$clone_receipt_number}\&draft\=1");
@@ -1031,7 +1039,7 @@ class Receipt extends \Tms\Srm
         return $this->$kind;
     }
 
-    protected function totalOfReceipt($issue_date, $receipt_number, $templatekey, $draft = '0'): ?int
+    protected function totalOfReceipt($issue_date, $receipt_number, $templatekey, $draft = '0', $without_tax = false): ?int
     {
         $statement = 'userkey = ? AND templatekey = ? AND issue_date = ? AND receipt_number = ? AND draft = ?';
         $replaces = [$this->uid, $templatekey, $issue_date, $receipt_number, $draft];
@@ -1045,11 +1053,32 @@ class Receipt extends \Tms\Srm
         $total = 0;
         foreach ($details as $unit) {
             $subtotal = $unit['price'] * $unit['quantity'];
-            $total += $subtotal + $subtotal * (float)$unit['tax_rate'];
+
+            $tax_rate = ($without_tax) ? 0 : (float)$unit['tax_rate'];
+            $total += $subtotal + $subtotal * $tax_rate;
         }
         $total += $additionals['additional_1_price'] ?? 0;
         $total += $additionals['additional_2_price'] ?? 0;
 
         return round($total);
+    }
+
+    protected function receiptIdFromType($type): ?int
+    {
+        if (false !== $records = $this->db->select(
+            'id,pdf_mapper', 'receipt_template', 'WHERE userkey = ?', [$this->uid]
+        )) {
+            foreach($records as $record) {
+                $pdf_mapper_source = $record['pdf_mapper'];
+                if (!empty($pdf_mapper_source)) {
+                    $pdf_mapper = simplexml_load_string($pdf_mapper_source);
+                    if ((string)$pdf_mapper->attributes()->typeof === $type) {
+                        return (int)$record['id'];
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }
