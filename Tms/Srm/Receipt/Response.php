@@ -10,6 +10,7 @@
 
 namespace Tms\Srm\Receipt;
 
+use P5\Lang;
 use P5\Mail;
 
 /**
@@ -516,14 +517,17 @@ class Response extends \Tms\Srm\Receipt
         );
 
         $data = [];
-        $bill_id = [];
+        $bill = [];
         foreach ($records as $record) {
             $client_fields = ['company','division','fullname','zipcode','address1','address2'];
             $client = $record['client_id'];
             $uname = $this->db->get('uname', 'user', 'id = ?', [$record['userkey']]);
             $this->resetUserByCli($uname);
 
-            $bill_id[$uname] = $this->receiptIdFromType('bill');
+            list($id, $mapper) = $this->receiptIdFromType('bill', true);
+            $subject = $mapper->autoissue->subject ?? Lang::translate('AUTOISSUE_BILL_SUBJECT');
+            $format = $mapper->autoissue->contentform ?? '%s (%tNo.%n)';
+            $bill[$uname] = ['id' => $id, 'subject' => $subject];
 
             if (!isset($data[$uname])) {
                 $data[$uname] = [];
@@ -540,8 +544,10 @@ class Response extends \Tms\Srm\Receipt
                 true
             );
 
+            $record['title'] = $this->db->get('title', 'receipt_template', 'id = ?', [$record['templatekey']]);
+
             $data[$uname][$client][] = [
-                'content' => sprintf('No.%s: %s', $record['receipt_number'], $record['subject']),
+                'content' => $this->sprintf($format, $record),
                 'price' => $total,
                 'quantity' => 1,
                 'issue_date' => $record['issue_date'],
@@ -557,7 +563,7 @@ class Response extends \Tms\Srm\Receipt
 
         foreach($data as $uname => $clients) {
             $this->resetUserByCli($uname);
-            $this->session->param('receipt_id', $bill_id[$uname]);
+            $this->session->param('receipt_id', $bill[$uname]['id']);
 
             $draft_bills = [];
             foreach ($clients as $client => $list) {
@@ -582,7 +588,7 @@ class Response extends \Tms\Srm\Receipt
                         $list[0]['receipt_number'],
                         $page_number,
                         $draft,
-                        $bill_id[$uname]
+                        $bill[$uname]['id']
                     )) {
                         trigger_error('Database Error.');
                     } else {
@@ -599,7 +605,7 @@ class Response extends \Tms\Srm\Receipt
                 }
 
                 $this->request->param('issue_date', $today);
-                $this->request->param('subject', 'Billing');
+                $this->request->param('subject', date($bill[$uname]['subject']));
 
                 $line = 0;
                 $content = [];
@@ -657,5 +663,14 @@ class Response extends \Tms\Srm\Receipt
         }
 
         exit;
+    }
+
+    private function sprintf($format, $data): string
+    {
+        return str_replace(
+            ['%s','%t','%n'],
+            [$data['subject'],$data['title'],$data['receipt_number']],
+            $format
+        );
     }
 }

@@ -1063,7 +1063,7 @@ class Receipt extends \Tms\Srm
         return round($total);
     }
 
-    protected function receiptIdFromType($type): ?int
+    protected function receiptIdFromType($type, $with_map = false)
     {
         if (false !== $records = $this->db->select(
             'id,pdf_mapper', 'receipt_template', 'WHERE userkey = ?', [$this->uid]
@@ -1073,10 +1073,24 @@ class Receipt extends \Tms\Srm
                 if (!empty($pdf_mapper_source)) {
                     $pdf_mapper = simplexml_load_string($pdf_mapper_source);
                     if ((string)$pdf_mapper->attributes()->typeof === $type) {
+                        if ($with_map !== false) {
+                            return [(int)$record['id'], $pdf_mapper];
+                        }
                         return (int)$record['id'];
                     }
                 }
             }
+        }
+
+        return null;
+    }
+
+    protected function getPdfMapper($id)
+    {
+        if (false !== $pdf_mapper_source = $this->db->get(
+            'pdf_mapper', 'receipt_template', 'WHERE id = ?', [$id]
+        )) {
+            return simplexml_load_string($pdf_mapper_source);
         }
 
         return null;

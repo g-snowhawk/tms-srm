@@ -34,4 +34,6 @@ class Ja extends \P5\Lang
 
     const UPDATED_BILLING_DATE = "締日を更新しました";
     const INCORRECT_DATE_VALUE = "不正な日付です";
+
+    const AUTOISSUE_BILL_SUBJECT = "Y年n月ご請求分";
 }
