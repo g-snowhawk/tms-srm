@@ -396,10 +396,19 @@ class Receipt extends \Tms\Srm
         return (int)$latest_number + 1;
     }
 
-    protected function outputPdf($client_id, $receiptkey) : bool
+    protected function outputPdf($client_id, $receiptkey, $preview = null) : bool
     {
-        list($year, $month, $day, $receipt_number, $userkey, $templatekey, $draft) = explode('-', $receiptkey);
-        $issue_date = implode('-', [$year, $month, $day]);
+        $encrypt_to = ['copy','modify'];
+        if (is_null($preview)) {
+            list($year, $month, $day, $receipt_number, $userkey, $templatekey, $draft) = explode('-', $receiptkey);
+            $issue_date = implode('-', [$year, $month, $day]);
+        } else {
+            $issue_date = date('Y-m-d', strtotime($preview['issue_date']));
+            $templatekey = $preview['templatekey'];
+            $draft = '1';
+            $encrypt_to[] = 'print';
+        }
+
         $pdf_mapper_source = $this->db->get('pdf_mapper', 'receipt_template', 'id = ? AND userkey = ?', [$templatekey, $this->uid]);
         if (empty($pdf_mapper_source)) {
             // If PDF mapper is empty nothing to do.
@@ -419,9 +428,48 @@ class Receipt extends \Tms\Srm
         $carry_forward = (isset($pdf_mapper->detail->attributes()->carryforward))
             ? (string)$pdf_mapper->detail->attributes()->carryforward : null;
 
-        $header = $this->db->get('*', 'receipt', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$receiptkey]);
-        $detail = $this->receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, $carry_forward, $header);
-        $client = $this->db->get('*', 'receipt_to', "id = ? AND userkey = ?", [$client_id, $this->uid]);
+        if (is_null($preview)) {
+            $header = $this->db->get('*', 'receipt', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$receiptkey]);
+            $detail = $this->receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, $carry_forward, $header);
+            $client = $this->db->get('*', 'receipt_to', "id = ? AND userkey = ?", [$client_id, $this->uid]);
+        } else {
+            $header = [];
+            $detail = [];
+            $client = [];
+            $fields = $this->db->getFields('receipt');
+            foreach($fields as $field) {
+                $header[$field] = $preview[$field] ?? '';
+            }
+            $fields = $this->db->getFields('receipt_to');
+            foreach($fields as $field) {
+                $client[$field] = $preview[$field] ?? '';
+            }
+
+            $page_number = $preview['page_number'] ?? 1;
+            $subtotal = 0;
+            $tax = 0;
+            foreach($preview['content'] as $n => $value) {
+                $price = $preview['price'][$n] ?? '';
+                $quantity = $preview['quantity'][$n] ?? '';
+                $tax_rate = $preview['tax_rate'][$n] ?? '';
+                $sum = (float)$price * (float)$quantity;
+                $subtotal += $sum;
+                $tax += $sum * (float)$tax_rate;
+                $detail[$page_number][] = [
+                    'page_number' => $page_number,
+                    'line_number' => $n,
+                    'content' => $value,
+                    'price' => $preview['price'][$n] ?? '',
+                    'quantity' => $preview['quantity'][$n] ?? '',
+                    'unit' => $preview['unit'][$n] ?? '',
+                    'sum' => (($sum > 0) ? $sum : ''),
+                ];
+            }
+            $header['subtotal'] = $subtotal;
+            $header['tax'] = $tax;
+            $header['total'] = $subtotal + $tax + (int)$header['additional_1_price'] + (int)$header['additional_2_price'];
+        }
+
         $signature = $this->signatureForPdf($this->userinfo);
 
         if (property_exists($pdf_mapper, 'bank')) {
@@ -478,6 +526,19 @@ class Receipt extends \Tms\Srm
             }
 
             $pdf->addPageFromTemplate($import_page);
+
+            if (!is_null($preview)) {
+                $watermark = __DIR__.'/templates/srm/receipt/watermark_draft.png';
+                $size = getimagesize($watermark);
+                $hd = $pdf->handler();
+                $doc_width = $hd->getPageWidth();
+                $doc_height = $hd->getPageHeight();
+                $w = round($doc_width * 0.7);
+                $h = round($w * $size[1] / $size[0]);
+                $x = round(($doc_width - $w) * 0.5);
+                $y = round(($doc_height - $h) * 0.5);
+                $hd->Image($watermark, $x, $y, $w);
+            }
 
             $node_list = get_object_vars($pdf_mapper);
             foreach ($node_list as $node_name => $child_node) {
@@ -540,7 +601,12 @@ class Receipt extends \Tms\Srm
             $pdf->setMetaData($meta);
         }
 
-        $pdf->encrypt(['copy','modify'], '', bin2hex(random_bytes(10)), 1);
+        $pdf->encrypt($encrypt_to, '', bin2hex(random_bytes(10)), 1);
+
+        if (!is_null($preview)) {
+            $pdf->output('draft');
+            exit;
+        }
 
         return $pdf->saveFileAs($save_path);
     }

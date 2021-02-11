@@ -379,4 +379,14 @@ class Receive extends Response
 
         $this->responseJson($json);
     }
+
+    public function preview(): void
+    {
+        $post = $this->request->post();
+        if (!isset($post['templatekey'])) {
+            $post['templatekey'] = $this->session->param('receipt_id');
+        }
+
+        $this->outputPdf(null, null, $post);
+    }
 }

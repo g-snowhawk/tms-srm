@@ -7,6 +7,12 @@
 .separate-block > * {
   display: block;
 }
+.form-footer .separate-block > *:first-child {
+  text-align: left;
+}
+.form-footer .separate-block > * > input {
+  margin-bottom: 0.25em;
+}
 
 .notice ul {
   color: #808080;

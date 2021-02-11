@@ -20,6 +20,7 @@ const inputCompany = document.querySelector('input[name=company]');
 const buttonDelete = document.querySelector('input[name=s1_delete]');
 const buttonAvailable = document.querySelector('a[class*=availables]');
 const buttonAddPage = document.querySelector('input[name=s1_addpage]');
+const buttonPreview = document.querySelector('input[name=s2_preview]');
 
 const displayTaxRate = document.getElementById('tax-rate');
 const taxRate = (displayTaxRate) ? parseFloat(displayTaxRate.dataset.rate) : NaN;
@@ -77,6 +78,10 @@ function initializeReceiptEditor(event) {
 
     if (buttonAddPage) {
         buttonAddPage.addEventListener('click', cancelConfirm);
+    }
+
+    if (buttonPreview) {
+        buttonPreview.addEventListener('click', previewReceipt);
     }
 
     const pageButtons = document.querySelectorAll('button.page-button');
@@ -700,4 +705,17 @@ function updateBillingDate(event) {
             isFetching = false;
         });
     }
+}
+
+function previewReceipt(event) {
+    const element = event.target;
+    const form = element.form;
+    const modeOrigin = form.mode.value;
+
+    form.target = 'preview';
+    form.mode.value = 'srm.receipt.receive:preview';
+    form.submit();
+
+    form.target = "_self";
+    form.mode.value = modeOrigin;
 }
