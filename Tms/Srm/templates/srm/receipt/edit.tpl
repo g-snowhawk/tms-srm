@@ -1,5 +1,22 @@
 {% extends "master.tpl" %}
 
+{% block head %}
+<template id="preview-block">
+  <div id="preview-container">
+    <object data="" class="preview-content"></object>
+    <div class="image-frame">
+      <img src="" class="preview-content">
+    </div>
+    <div class="progress-frame">
+      <progress max="100">プレビュー作成中...</progress>
+    </div>
+    <div class="preview-controller">
+      <a href="#" class="close-button">閉じる</a>
+    </div>
+  </div>
+</template>
+{% endblock %}
+
 {% block main %}
   {% if pageCount > 1 %}
     {% set currentPage = post.page_number is defined ? post.page_number : 1 %}
@@ -152,8 +169,8 @@
         <div class="separate-block">
           <span>
             <input type="submit" name="s1_submit" value="発行">
-            <input type="submit" name="s1_delete" value="削除" data-confirm="この{{ receiptName }}を削除します。取り消しはできませんが、よろしいですか？"><br>
-            <input type="button" name="s2_preview" value="プレビュー">
+            <input type="submit" name="s1_delete" value="削除" data-confirm="この{{ receiptName }}を削除します。取り消しはできませんが、よろしいですか？">
+            {# if enable_preview #}<br><input type="button" name="s2_preview" value="プレビュー">{# endif #}
           </span>
           <span>
             <a href="?mode=srm.receipt.response" class="button">キャンセル</a>

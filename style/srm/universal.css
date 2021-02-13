@@ -641,3 +641,103 @@ html#srm-client-default #container .wrapper table thead td:after {
   top: 0;
   z-index: 11;
 }
+
+#preview-container {
+  background: rgba(255,255,255,0.7);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+}
+#preview-container .preview-controller {
+  left: 0;
+  margin: 0.5rem;
+  position: absolute;
+  right: 0;
+  text-align: right;
+  top: 0;
+}
+#preview-container .preview-controller a.close-button {
+  border-radius: 1.5rem;
+  color: transparent;
+  display: inline-block;
+  font-size: 0;
+  height: 3rem;
+  position: relative;
+  vertical-align: top;
+  width: 3rem;
+}
+#preview-container .preview-controller a.close-button:before {
+  border: 1px solid #999;
+  content: '';
+  display: inline-block;
+  height: 0;
+  left: 50%;
+  margin: -1px 0 0 -1rem;
+  position: absolute;
+  top: 50%;
+  transform: rotate(45deg);
+  width: 2rem;
+}
+#preview-container .preview-controller a.close-button:after {
+  border: 1px solid #999;
+  content: '';
+  display: inline-block;
+  height: 0;
+  left: 50%;
+  margin: -1px 0 0 -1rem;
+  position: absolute;
+  top: 50%;
+  transform: rotate(135deg);
+  width: 2rem;
+}
+#preview-container object.preview-content {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+#preview-container .image-frame {
+  align-items: center;
+  background: rgb(38,38,38);
+  box-sizing: border-box;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  left: 0;
+  overflow: auto;
+  padding: 0.5rem;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+#preview-container .image-frame img {
+  background: #fff;
+  cursor: zoom-in;
+  margin: auto;
+}
+#preview-container .image-frame img.zoom-in {
+  cursor: zoom-out;
+}
+#preview-container .progress-frame {
+  align-items: center;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+#preview-container .progress-frame progress {
+  width: 280px;
+}
+#preview-container.active .progress-frame,
+#preview-container.img-box object,
+#preview-container.object-box .image-frame {
+  display: none;
+}

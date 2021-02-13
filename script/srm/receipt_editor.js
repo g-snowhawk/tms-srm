@@ -42,6 +42,7 @@ let fetchCanceller = new AbortController();
 let valueAtKeyDown = undefined;
 let isComposing = false;
 let isFetching = false;
+let previewContainer = undefined;
 
 switch (document.readyState) {
     case 'loading' :
@@ -710,12 +711,88 @@ function updateBillingDate(event) {
 function previewReceipt(event) {
     const element = event.target;
     const form = element.form;
-    const modeOrigin = form.mode.value;
 
-    form.target = 'preview';
-    form.mode.value = 'srm.receipt.receive:preview';
-    form.submit();
+    let data = new FormData(form);
+    data.set('mode', 'srm.receipt.receive:preview');
 
-    form.target = "_self";
-    form.mode.value = modeOrigin;
+    if (isFetching) {
+        fetchCanceller.abort();
+        isFetching = false;
+    }
+
+    isFetching = true;
+    fetch(form.action, {
+        signal: fetchCanceller.signal,
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: data,
+    }).then(response => { 
+        if (response.ok) {
+            const contentType = response.headers.get("content-type");
+            switch(contentType.toLowerCase()) {
+                case 'image/jpeg':
+                case 'image/png':
+                case 'application/pdf':
+                    return response.blob();
+            }
+        } else {
+            throw new Error('Server Error'.translate());
+        }
+    }).then(blob => {
+        const tag = (blob.type === 'application/pdf') ? 'object' : 'img';
+        const elm = previewContainer.querySelector(tag + '.preview-content');
+        const atr = (elm.nodeName.toLowerCase() === 'object') ? 'data' : 'src';
+        elm.onload = function() {
+            previewContainer.classList.add('active');
+            if (this.nodeName.toLowerCase() === 'img') {
+                this.dataset.natualWidth = this.width;
+                this.width = Math.round(this.width * 0.5);
+                this.addEventListener('click', zoomPreviewImage);
+            }
+        }
+
+        elm[atr] = URL.createObjectURL(blob);
+
+        const className = tag + '-box';
+        previewContainer.classList.add(className);
+    }).catch(error => {
+        if (error.name === 'AbortError') {
+            console.warn("Aborted!!");
+            fetchCanceller = new AbortController()
+        } else {
+            console.error(error)
+        }
+    }).then(() => {
+        isFetching = false;
+    });
+
+    try {
+        document.body.appendChild(document.getElementById('preview-block').content.cloneNode(true));
+        previewContainer = document.getElementById('preview-container');
+        previewContainer.querySelectorAll('.close-button').forEach(button => {
+            button.addEventListener('click', endPreview);
+        });
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+function endPreview(event) {
+    event.preventDefault();
+    previewContainer.parentNode.removeChild(previewContainer);
+    previewContainer = undefined;
+}
+
+function zoomPreviewImage(event) {
+    const element = event.target;
+    element.classList.toggle('zoom-in');
+
+    if (element.dataset.natualWidth === element.width.toString()) {
+        element.width = Math.round(element.width * 0.5);
+    } else {
+        element.width = element.dataset.natualWidth;
+    }
 }

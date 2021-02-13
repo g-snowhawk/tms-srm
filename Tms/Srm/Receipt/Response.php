@@ -361,6 +361,8 @@ class Response extends \Tms\Srm\Receipt
             $this->appendHtmlClass('unavailable-receipt');
         }
 
+        $this->view->bind('enable_preview', class_exists('Imagick'));
+
         $this->app->execPlugin('beforeRendering');
 
         $this->setHtmlId('receipt-edit');

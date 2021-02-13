@@ -430,6 +430,7 @@ class Receipt extends \Tms\Srm
 
         if (is_null($preview)) {
             $header = $this->db->get('*', 'receipt', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$receiptkey]);
+            $header['note'] = $this->db->get('content', 'receipt_note', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$receiptkey]);
             $detail = $this->receiptDetailsForPdf($receiptkey, $line_count, $middlepage_line_count, $carry_forward, $header);
             $client = $this->db->get('*', 'receipt_to', "id = ? AND userkey = ?", [$client_id, $this->uid]);
         } else {
@@ -445,13 +446,20 @@ class Receipt extends \Tms\Srm
                 $client[$field] = $preview[$field] ?? '';
             }
 
+            $tax_rates = ['tax_rate' => 0, 'reduced_tax_rate' => 0];
+            foreach ($tax_rates as $kind => $rate) {
+                $tax_rates[$kind] = $this->getTaxRate($kind, $issue_date);
+            }
+
             $page_number = $preview['page_number'] ?? 1;
             $subtotal = 0;
             $tax = 0;
             foreach($preview['content'] as $n => $value) {
                 $price = $preview['price'][$n] ?? '';
                 $quantity = $preview['quantity'][$n] ?? '';
-                $tax_rate = $preview['tax_rate'][$n] ?? '';
+                $kind = (($preview['reduced_tax_rate'][$n] ?? '') === '1')
+                    ? 'reduced_tax_rate' : 'tax_rate';
+                $tax_rate = $tax_rates[$kind];
                 $sum = (float)$price * (float)$quantity;
                 $subtotal += $sum;
                 $tax += $sum * (float)$tax_rate;
@@ -468,6 +476,7 @@ class Receipt extends \Tms\Srm
             $header['subtotal'] = $subtotal;
             $header['tax'] = $tax;
             $header['total'] = $subtotal + $tax + (int)$header['additional_1_price'] + (int)$header['additional_2_price'];
+            $header['note'] = $preview['note'] ?? '';
         }
 
         $signature = $this->signatureForPdf($this->userinfo);
@@ -478,7 +487,6 @@ class Receipt extends \Tms\Srm
             $bank['label'] = $pdf_mapper->bank->firstpage->account_holder->attributes()->label;
         }
 
-        $header['note'] = $this->db->get('content', 'receipt_note', "CONCAT(issue_date,'-',receipt_number,'-',userkey,'-',templatekey,'-',draft) = ?", [$receiptkey]);
         if (!empty($header['note'])) {
             $header['note'] = nl2br(preg_replace("/(\r\n|\r)/", "\n", $header['note']));
         }
@@ -579,6 +587,31 @@ class Receipt extends \Tms\Srm
             }
         }
 
+        if (!is_null($preview)) {
+
+            // TODO: Fix error handling to TCPDF
+            restore_error_handler();
+
+            if (class_exists('Imagick')) {
+                $tmpfile = tempnam(sys_get_temp_dir(), 'PDF');
+                $image = "{$tmpfile}.png";
+                $pdf->saveFileAs($tmpfile);
+                $density = 144;
+                $convert = new \Imagick();
+                $convert->setResolution($density,$density);
+                $convert->readImage($tmpfile);
+                $convert->setIteratorIndex(0);
+                $convert->writeImage($image);
+                header('Content-Type: image/png');
+                readfile($image);
+                unlink($tmpfile);
+                unlink($image);
+            } else {
+                $pdf->output('draft');
+            }
+            exit;
+        }
+
         $format = (string)$pdf_mapper->attributes()->savepath;
         $save_path = $this->pathToPdf($format, $issue_date, $receipt_number);
 
@@ -602,11 +635,6 @@ class Receipt extends \Tms\Srm
         }
 
         $pdf->encrypt($encrypt_to, '', bin2hex(random_bytes(10)), 1);
-
-        if (!is_null($preview)) {
-            $pdf->output('draft');
-            exit;
-        }
 
         return $pdf->saveFileAs($save_path);
     }
