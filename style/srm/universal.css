@@ -734,7 +734,7 @@ html#srm-client-default #container .wrapper table thead td:after {
   width: 100%;
 }
 #preview-container .progress-frame progress {
-  width: 280px;
+  width: 200px;
 }
 #preview-container.active .progress-frame,
 #preview-container.img-box object,

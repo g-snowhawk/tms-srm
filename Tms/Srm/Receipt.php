@@ -590,7 +590,7 @@ class Receipt extends \Tms\Srm
         if (!is_null($preview)) {
 
             // TODO: Fix error handling to TCPDF
-            restore_error_handler();
+            //restore_error_handler();
 
             if (class_exists('Imagick')) {
                 $tmpfile = tempnam(sys_get_temp_dir(), 'PDF');
@@ -601,6 +601,12 @@ class Receipt extends \Tms\Srm
                 $convert->setResolution($density,$density);
                 $convert->readImage($tmpfile);
                 $convert->setIteratorIndex(0);
+
+                $bg = $pdf_mapper->attributes()->bgcolor ?? '#ffffff';
+                $convert->setImageBackgroundColor($bg);
+                $convert->setImageAlphaChannel(\Imagick::ALPHACHANNEL_REMOVE);
+                //$convert->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+
                 $convert->writeImage($image);
                 header('Content-Type: image/png');
                 readfile($image);
