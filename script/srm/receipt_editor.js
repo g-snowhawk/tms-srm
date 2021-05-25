@@ -654,57 +654,110 @@ function cancelConfirm(event) {
 function updateBillingDate(event) {
     const element = event.target;
 
-    if (event.key === 'Enter' && element.value.match(/^[0-9]{4}[^0-9][0-9]{1,2}[^0-9][0-9]{1,2}[0-9]?$/)) {
-        if (!confirm(element.dataset.confirm)) {
-            return;
-        }
-        const form = element.form;
-        const params = [...new URLSearchParams(window.location.search).entries()].reduce((obj, e) => ({...obj, [e[0]]: e[1]}), {});
+    if (event.key === 'Enter') {
+        if (element.value.match(/^[0-9]{4}[^0-9][0-9]{1,2}[^0-9][0-9]{1,2}[0-9]?$/)) {
+            if (!confirm(element.dataset.confirm)) {
+                return;
+            }
+            const form = element.form;
+            const params = [...new URLSearchParams(window.location.search).entries()].reduce((obj, e) => ({...obj, [e[0]]: e[1]}), {});
 
-        let data = new FormData();
-        data.append('stub', form.stub.value);
-        data.append('returntype', 'json');
-        data.append('mode', 'srm.receipt.receive:update-billing-date');
-        data.append('id', params.id);
-        data.append('billing_date', element.value);
+            let data = new FormData();
+            data.append('stub', form.stub.value);
+            data.append('returntype', 'json');
+            data.append('mode', 'srm.receipt.receive:update-billing-date');
+            data.append('id', params.id);
+            data.append('billing_date', element.value);
 
-        if (isFetching) {
-            fetchCanceller.abort();
-            isFetching = false;
-        }
+            if (isFetching) {
+                fetchCanceller.abort();
+                isFetching = false;
+            }
 
-        isFetching = true;
-        fetch(form.action, {
-            signal: fetchCanceller.signal,
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: data,
-        }).then(response => { 
-            if (response.ok) {
-                let contentType = response.headers.get("content-type");
-                if (contentType.match(/^application\/json/)) {
-                    return response.json();
+            isFetching = true;
+            fetch(form.action, {
+                signal: fetchCanceller.signal,
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: data,
+            }).then(response => { 
+                if (response.ok) {
+                    let contentType = response.headers.get("content-type");
+                    if (contentType.match(/^application\/json/)) {
+                        return response.json();
+                    }
+                    throw new Error('Unexpected response'.translate());
+                } else {
+                    throw new Error('Server Error'.translate());
                 }
-                throw new Error('Unexpected response'.translate());
-            } else {
-                throw new Error('Server Error'.translate());
+            })
+            .then(json => {
+                alert(json.message);
+            }).catch(error => {
+                if (error.name === 'AbortError') {
+                    console.warn("Aborted!!");
+                    fetchCanceller = new AbortController()
+                } else {
+                    console.error(error)
+                }
+            }).then(() => {
+                isFetching = false;
+            });
+        } else if (element.value === '') {
+            if (!confirm(element.dataset.clearConfirm)) {
+                return;
             }
-        })
-        .then(json => {
-            alert(json.message);
-        }).catch(error => {
-            if (error.name === 'AbortError') {
-                console.warn("Aborted!!");
-                fetchCanceller = new AbortController()
-            } else {
-                console.error(error)
+            const form = element.form;
+            const params = [...new URLSearchParams(window.location.search).entries()].reduce((obj, e) => ({...obj, [e[0]]: e[1]}), {});
+
+            let data = new FormData();
+            data.append('stub', form.stub.value);
+            data.append('returntype', 'json');
+            data.append('mode', 'srm.receipt.receive:clear-billing-date');
+            data.append('id', params.id);
+            data.append('billing_date', element.value);
+
+            if (isFetching) {
+                fetchCanceller.abort();
+                isFetching = false;
             }
-        }).then(() => {
-            isFetching = false;
-        });
+
+            isFetching = true;
+            fetch(form.action, {
+                signal: fetchCanceller.signal,
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: data,
+            }).then(response => { 
+                if (response.ok) {
+                    let contentType = response.headers.get("content-type");
+                    if (contentType.match(/^application\/json/)) {
+                        return response.json();
+                    }
+                    throw new Error('Unexpected response'.translate());
+                } else {
+                    throw new Error('Server Error'.translate());
+                }
+            })
+            .then(json => {
+                alert(json.message);
+            }).catch(error => {
+                if (error.name === 'AbortError') {
+                    console.warn("Aborted!!");
+                    fetchCanceller = new AbortController()
+                } else {
+                    console.error(error)
+                }
+            }).then(() => {
+                isFetching = false;
+            });
+        }
     }
 }
 

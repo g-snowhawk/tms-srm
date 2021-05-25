@@ -386,6 +386,39 @@ class Receive extends Response
         $this->responseJson($json);
     }
 
+    public function clearBillingDate()
+    {
+        $post = $this->request->post();
+        $receipt_id = $this->session->param('receipt_id');
+        list($issue_date, $receipt_number) = explode(':', $post['id']);
+
+        $this->db->begin();
+
+        $json = [ 'status' => 1 ];
+        if (false !== $this->db->update(
+            'receipt',
+            [ 'billing_date' => null ],
+            'userkey = ? AND issue_date = ? AND receipt_number = ? AND templatekey = ?',
+            [$this->uid, $issue_date, $receipt_number, $receipt_id]
+        )) {
+            $this->db->commit();
+            $json['status'] = 0;
+            $json['message'] = Lang::translate('UPDATED_BILLING_DATE');
+        } else {
+            if (preg_match('/Incorrect date value/i', $this->db->error())) {
+                $json['message'] = Lang::translate('INCORRECT_DATE_VALUE');
+            } else {
+                $json['message'] = 'Database Error';
+            }
+        }
+
+        if ($json['status'] === 1) {
+            $this->db->rollback();
+        }
+
+        $this->responseJson($json);
+    }
+
     public function preview(): void
     {
         $post = $this->request->post();
