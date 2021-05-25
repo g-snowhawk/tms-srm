@@ -58,13 +58,53 @@ class Template extends \Tms\Srm
             }
         }
 
+        if (!empty($save['priority'])) {
+            if (!empty($post['id'])) {
+                $priority = $this->db->get('priority', 'receipt_template', 'id = ?', [$post['id']]);
+                if (false === $this->db->update(
+                    'receipt_template',
+                    [],
+                    'userkey = ? and priority > ?',
+                    [$this->uid, $priority],
+                    ['priority' => 'priority - 1']
+                )) {
+                    trigger_error($this->db->error());
+                    $this->db->rollback();
+
+                    return false;
+                }
+            }
+            if (false === $this->db->update(
+                'receipt_template',
+                [],
+                'userkey = ? and priority >= ?',
+                [$this->uid, $save['priority']],
+                ['priority' => 'priority + 1']
+            )) {
+                trigger_error($this->db->error());
+                $this->db->rollback();
+
+                return false;
+            }
+        }
+
         if (empty($post['id'])) {
             $raw = ['create_date' => 'CURRENT_TIMESTAMP'];
             $save['userkey'] = $this->uid;
+
+            if (empty($save['priority']) && $save['priority'] !== '0') {
+                $max = $this->db->max('priority', 'receipt_template', 'userkey = ?', [$this->uid]);
+                $save['priority'] = (int)$max + 1;
+            }
+
             if (false !== $result = $this->db->insert($table, $save, $raw)) {
                 $post['id'] = $this->db->lastInsertId(null, 'id');
             }
         } else {
+            if (empty($save['priority']) && $save['priority'] !== '0') {
+                unset($save['priority']);
+            }
+
             $result = $this->db->update($table, $save, 'id = ?', [$post['id']], $raw);
         }
 

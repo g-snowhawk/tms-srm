@@ -72,7 +72,7 @@ class Response extends \Tms\Srm\Receipt
             $receipts = $this->db->select(
                 'id,title',
                 'receipt_template',
-                'WHERE userkey = ?',
+                'WHERE userkey = ? ORDER by priority',
                 [$this->uid]
             );
             $this->view->bind('receipts', $receipts);

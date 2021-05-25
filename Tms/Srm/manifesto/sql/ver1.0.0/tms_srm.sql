@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS `TMS_receipt_template` (
   `userkey` int(11) unsigned NOT NULL,
   `title` varchar(50) NOT NULL,
   `line` tinyint(3) unsigned NOT NULL DEFAULT '10',
+  `priority` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `pdf_mapper` text NOT NULL,
   `mail_template` text NOT NULL,
   `create_date` datetime NOT NULL,

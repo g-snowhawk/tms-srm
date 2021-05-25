@@ -248,7 +248,13 @@ class Receive extends Response
         $attachment = $this->request->param('pdf_path');
         $attachment_name = $this->request->param('attachment_name');
 
-        $mail = new Mail();
+        $host = $this->app->cnf('mail:smtp_host') ?? '';
+        $port = $this->app->cnf('mail:smtp_port') ?? '';
+        $user = $this->app->cnf('mail:smtp_user') ?? '';
+        $pass = $this->app->cnf('mail:smtp_pass') ?? '';
+        $enc = $this->app->cnf('mail:encoding') ?? 'jis';
+
+        $mail = new Mail($host, $port, $user, $pass, $enc);
 
         $mail->to($this->request->param('to'));
         $mail->from($from);

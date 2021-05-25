@@ -40,9 +40,9 @@ class Response extends \Tms\Srm\Template
         $this->checkPermission('srm.template.read');
 
         $templates = $this->db->select(
-            'id ,title, line',
+            'id ,title, line, priority',
             'receipt_template',
-            'WHERE userkey = ?',
+            'WHERE userkey = ? ORDER by priority',
             [$this->uid, 0]
         );
         $this->view->bind('templates', $templates);
@@ -70,7 +70,7 @@ class Response extends \Tms\Srm\Template
             $post = $this->request->POST();
         } else {
             $post = $this->db->get(
-                'id, title, line, pdf_mapper, mail_template, create_date, modify_date',
+                'id, title, line, priority, pdf_mapper, mail_template, create_date, modify_date',
                 'receipt_template',
                 'id = ? AND userkey = ?',
                 [$this->request->param('id'), $this->uid]

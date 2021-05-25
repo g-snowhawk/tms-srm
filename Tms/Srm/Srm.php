@@ -208,7 +208,7 @@ class Srm extends User implements PackageInterface
         $receipts = $this->db->select(
             'id ,title',
             'receipt_template',
-            'WHERE userkey = ?',
+            'WHERE userkey = ? ORDER by priority',
             [$this->uid]
         );
 

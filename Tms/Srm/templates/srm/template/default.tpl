@@ -10,7 +10,7 @@
         <table class="nlist">
           <thead>
             <tr>
-              <td>ID</td>
+              <td>No</td>
               <td>帳票名</td>
               <td>行数</td>
               <td>&nbsp;</td>
@@ -20,7 +20,7 @@
           <tbody>
       {% endif %}
       <tr>
-        <td class="numeric-cell">{{ unit.id }}</td>
+        <td class="numeric-cell">{{ unit.priority }}</td>
         <td class="spacing-75-cell">{{ unit.title }}</td>
         <td class="spacing-25-cell alphabet-cell">{{ unit.line }}</td>
         {% if apps.hasPermission('srm.template.update') %}

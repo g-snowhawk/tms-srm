@@ -22,6 +22,15 @@
       <label for="line">行数</label>
       <input type="text" name="line" id="line" value="{{ post.line }}" maxlength="2" class="ta-r">
     </div>
+    {% if err.vl_priority == 1 %}
+      <div class="error">
+        <i>入力してください</i>
+      </div>
+    {% endif %}
+    <div class="fieldset{% if err.vl_priority == 1 %} invalid{% endif %}">
+      <label for="line">表示順</label>
+      <input type="text" name="priority" id="priority" value="{{ post.priority }}" maxlength="2" class="ta-r">
+    </div>
 
     {% if err.vl_pdf_mapper == 1 %}
       <div class="error">

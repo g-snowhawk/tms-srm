@@ -737,10 +737,11 @@ function previewReceipt(event) {
                 case 'image/png':
                 case 'application/pdf':
                     return response.blob();
+                default:
+                    console.log(response.text());
             }
-        } else {
-            throw new Error('Server Error'.translate());
         }
+        throw new Error('Server Error'.translate());
     }).then(blob => {
         const tag = (blob.type === 'application/pdf') ? 'object' : 'img';
         const elm = previewContainer.querySelector(tag + '.preview-content');

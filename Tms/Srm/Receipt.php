@@ -588,30 +588,34 @@ class Receipt extends \Tms\Srm
         }
 
         if (!is_null($preview)) {
-
-            // TODO: Fix error handling to TCPDF
-            //restore_error_handler();
-
             if (class_exists('Imagick')) {
-                $tmpfile = tempnam(sys_get_temp_dir(), 'PDF');
-                $image = "{$tmpfile}.png";
-                $pdf->saveFileAs($tmpfile);
+                $bg = $pdf_mapper->attributes()->bgcolor ?? '#ffffff';
                 $density = 144;
                 $convert = new \Imagick();
                 $convert->setResolution($density,$density);
-                $convert->readImage($tmpfile);
-                $convert->setIteratorIndex(0);
 
-                $bg = $pdf_mapper->attributes()->bgcolor ?? '#ffffff';
-                $convert->setImageBackgroundColor($bg);
-                $convert->setImageAlphaChannel(\Imagick::ALPHACHANNEL_REMOVE);
-                //$convert->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+                $tmpfile = tempnam(sys_get_temp_dir(), 'PDF');
+                $pdf->saveFileAs($tmpfile);
 
-                $convert->writeImage($image);
-                header('Content-Type: image/png');
-                readfile($image);
-                unlink($tmpfile);
-                unlink($image);
+                try {
+                    $convert->readImage($tmpfile);
+                    $convert->setIteratorIndex(0);
+                    $convert->setImageBackgroundColor($bg);
+                    $convert->setImageAlphaChannel(\Imagick::ALPHACHANNEL_REMOVE);
+                    //$convert->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
+                    $image = "{$tmpfile}.png";
+                    $convert->writeImage($image);
+                    header('Content-Type: image/png');
+                    readfile($image);
+                    if (file_exists($image)) {
+                        unlink($image);
+                    }
+                } catch (\ImagickException $e) {
+                    trigger_error($e->getMessage());
+                }
+                if (file_exists($tmpfile)) {
+                    unlink($tmpfile);
+                }
             } else {
                 $pdf->output('draft');
             }
