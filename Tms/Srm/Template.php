@@ -58,7 +58,9 @@ class Template extends \Tms\Srm
             }
         }
 
-        if (!empty($save['priority'])) {
+        if (!empty($save['priority'])
+            && $this->db->exists('receipt_template', 'userkey = ? AND priority = ?', [$this->uid, $save['priority']])
+        ) {
             if (!empty($post['id'])) {
                 $priority = $this->db->get('priority', 'receipt_template', 'id = ?', [$post['id']]);
                 if (false === $this->db->update(
